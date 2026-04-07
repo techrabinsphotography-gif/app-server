@@ -2,13 +2,14 @@ const mongoose = require('mongoose');
 
 const packageSchema = new mongoose.Schema(
   {
-    tier: { type: String, enum: ['BRONZE', 'SILVER', 'GOLD'], required: true },
-    name: { type: String, required: true },
-    price: { type: Number, required: true },
-    features: { type: [String], default: [] },
-    sessionHours: { type: Number, required: true },
-    edited: { type: Number, required: true }, // number of edited photos included
-    serviceId: { type: mongoose.Schema.Types.ObjectId, ref: 'PhotoService', required: true },
+    tier:         { type: String, required: true },        // e.g. BRONZE, SILVER, GOLD or custom
+    name:         { type: String, required: true },
+    price:        { type: Number, required: true },
+    features:     { type: [String], default: [] },
+    sessionHours: { type: Number, default: 0 },
+    edited:       { type: Number, default: 0 },
+    serviceId:    { type: mongoose.Schema.Types.ObjectId, ref: 'PhotoService', required: true },
+    isActive:     { type: Boolean, default: true },
   },
   { timestamps: true }
 );

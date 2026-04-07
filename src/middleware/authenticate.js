@@ -16,10 +16,11 @@ const authenticate = async (req, res, next) => {
     req.user = { id: decoded.sub, role: decoded.role };
     next();
   } catch (err) {
+    console.error("JWT Verification Error:", err);
     if (err.name === 'TokenExpiredError') {
       return next(new AppError('Token expired', 401));
     }
-    return next(new AppError('Invalid token', 401));
+    return next(new AppError(`Invalid token: ${err.message}`, 401));
   }
 };
 

@@ -17,6 +17,10 @@ const bookingsRoutes = require('./features/bookings/bookings.routes');
 const paymentsRoutes = require('./features/payments/payments.routes');
 const chatRoutes = require('./features/chat/chat.routes');
 const profileRoutes = require('./features/profile/profile.routes');
+const adminRoutes = require('./features/admin/admin.routes');
+const uploadRoutes  = require('./features/upload/upload.routes');
+const pricingRoutes = require('./features/pricing/pricing.routes');
+const webRoutes    = require('./features/web/web.routes');
 
 const createApp = () => {
   const app = express();
@@ -47,6 +51,10 @@ const createApp = () => {
   app.use('/api/v1/payments', paymentsRoutes);
   app.use('/api/v1/chat', chatRoutes);
   app.use('/api/v1/profile', profileRoutes);
+  app.use('/api/v1/admin', adminRoutes);
+  app.use('/api/v1/upload',  uploadRoutes);
+  app.use('/api/v1/pricing', pricingRoutes);
+  app.use('/api/v1/web',     webRoutes);    // Web-site content (Team, Blog, CookiePolicy)
 
   // ── 404 Handler ──────────────────────────────────────────────────────────────
   app.use((req, res) => {

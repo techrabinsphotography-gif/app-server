@@ -2,8 +2,16 @@ const PhotoService = require('../../models/PhotoService');
 const Package = require('../../models/Package');
 const { AppError } = require('../../utils/apiResponse');
 
+// Public — only active
 const listServices = async (category) => {
   const filter = { isActive: true };
+  if (category) filter.category = category.toUpperCase();
+  return PhotoService.find(filter).sort({ createdAt: -1 });
+};
+
+// Admin — all services regardless of isActive
+const listAllServices = async (category) => {
+  const filter = {};
   if (category) filter.category = category.toUpperCase();
   return PhotoService.find(filter).sort({ createdAt: -1 });
 };
@@ -29,10 +37,22 @@ const updateService = async (id, data) => {
   return service;
 };
 
+// Soft delete (public-facing — hides from app)
 const deleteService = async (id) => {
   const service = await PhotoService.findByIdAndUpdate(id, { isActive: false }, { new: true });
   if (!service) throw new AppError('Service not found', 404);
   return service;
 };
 
-module.exports = { listServices, getServiceBySlug, getPackagesBySlug, createService, updateService, deleteService };
+// Hard delete (admin panel — permanently removes)
+const hardDeleteService = async (id) => {
+  const service = await PhotoService.findByIdAndDelete(id);
+  if (!service) throw new AppError('Service not found', 404);
+  
+  // also delete all pricing packages related to this service
+  await Package.deleteMany({ serviceId: id });
+  
+  return service;
+};
+
+module.exports = { listServices, listAllServices, getServiceBySlug, getPackagesBySlug, createService, updateService, deleteService, hardDeleteService };
