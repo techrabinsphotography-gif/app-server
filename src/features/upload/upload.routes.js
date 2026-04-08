@@ -46,18 +46,20 @@ router.post('/image', (req, res, next) => {
   });
 });
 
-const resumeStorage = new CloudinaryStorage({
-  cloudinary,
-  params: {
-    folder: 'robin-studio/resumes',
-    allowed_formats: ['pdf', 'doc', 'docx'],
-    resource_type: 'raw',
-  },
-});
+const resumeStorage = multer.memoryStorage();
 
 const resumeUpload = multer({
   storage: resumeStorage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB max
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ];
+    if (allowed.includes(file.mimetype)) return cb(null, true);
+    cb(new Error('Only PDF, DOC, and DOCX files are allowed'));
+  },
 });
 
 // POST /api/v1/upload/resume
@@ -65,7 +67,7 @@ router.post('/resume', (req, res, next) => {
   resumeUpload.single('resume')(req, res, (err) => {
     if (err) {
       console.error('RESUME UPLOAD ERROR:', err);
-      return res.status(500).json({ success: false, message: err.message || JSON.stringify(err) });
+      return res.status(400).json({ success: false, message: err.message });
     }
     next();
   });
@@ -73,11 +75,22 @@ router.post('/resume', (req, res, next) => {
   if (!req.file) {
     return res.status(400).json({ success: false, message: 'No file uploaded' });
   }
-  res.json({
-    success: true,
-    url: req.file.path,
-    publicId: req.file.filename,
-  });
+  // Stream buffer directly to Cloudinary as raw resource
+  const stream = cloudinary.uploader.upload_stream(
+    {
+      folder: 'robin-studio/resumes',
+      resource_type: 'raw',
+      public_id: `resume_${Date.now()}_${req.file.originalname.replace(/\s+/g, '_')}`,
+    },
+    (error, result) => {
+      if (error) {
+        console.error('CLOUDINARY RESUME ERROR:', error);
+        return res.status(500).json({ success: false, message: error.message });
+      }
+      res.json({ success: true, url: result.secure_url, publicId: result.public_id });
+    }
+  );
+  stream.end(req.file.buffer);
 });
 
 module.exports = router;
