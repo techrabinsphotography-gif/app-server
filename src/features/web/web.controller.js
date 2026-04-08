@@ -13,6 +13,10 @@ const CareerPost = require('../../models/CareerPost');
  * Returns team members grouped by tier → position for the website.
  */
 exports.getTeam = async (req, res) => {
+  // Prevent CDN/browser caching so deletes/edits reflect immediately
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.set('Pragma', 'no-cache');
+
   const members = await TeamMember.find().sort({ order: 1, name: 1 });
 
   // Fixed tier order: core → backbone → crew
