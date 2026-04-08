@@ -18,17 +18,37 @@ const paymentsRoutes = require('./features/payments/payments.routes');
 const chatRoutes = require('./features/chat/chat.routes');
 const profileRoutes = require('./features/profile/profile.routes');
 const adminRoutes = require('./features/admin/admin.routes');
-const uploadRoutes  = require('./features/upload/upload.routes');
+const uploadRoutes = require('./features/upload/upload.routes');
 const pricingRoutes = require('./features/pricing/pricing.routes');
-const webRoutes    = require('./features/web/web.routes');
+const webRoutes = require('./features/web/web.routes');
 
 const createApp = () => {
   const app = express();
 
   // ── Security & Logging ──────────────────────────────────────────────────────
   app.use(helmet());
+
+  // Build the allowed-origins list from env (trimmed, no empties)
+  const _rawOrigins = (process.env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+
   app.use(cors({
-    origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
+    // Function-based origin is required when credentials:true is set.
+    // Using a static '*' string with credentials:true violates the CORS spec
+    // and causes browsers to block ALL preflight responses.
+    origin: (origin, callback) => {
+      // Allow server-to-server, mobile apps, Postman, etc. (no Origin header)
+      if (!origin) return callback(null, true);
+      // Wildcard or empty list → reflect the requesting origin back
+      if (_rawOrigins.length === 0 || _rawOrigins.includes('*')) {
+        return callback(null, origin);
+      }
+      // Strict whitelist check
+      if (_rawOrigins.includes(origin)) return callback(null, origin);
+      callback(new Error(`CORS: origin '${origin}' not allowed`));
+    },
     credentials: true,
   }));
   app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
@@ -52,9 +72,9 @@ const createApp = () => {
   app.use('/api/v1/chat', chatRoutes);
   app.use('/api/v1/profile', profileRoutes);
   app.use('/api/v1/admin', adminRoutes);
-  app.use('/api/v1/upload',  uploadRoutes);
+  app.use('/api/v1/upload', uploadRoutes);
   app.use('/api/v1/pricing', pricingRoutes);
-  app.use('/api/v1/web',     webRoutes);    // Web-site content (Team, Blog, CookiePolicy)
+  app.use('/api/v1/web', webRoutes);    // Web-site content (Team, Blog, CookiePolicy)
 
   // ── 404 Handler ──────────────────────────────────────────────────────────────
   app.use((req, res) => {
