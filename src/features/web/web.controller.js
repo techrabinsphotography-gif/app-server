@@ -15,9 +15,9 @@ const CareerPost = require('../../models/CareerPost');
 exports.getTeam = async (req, res) => {
   const members = await TeamMember.find().sort({ order: 1, name: 1 });
 
-  // Fixed tier order: backbone → crew → core
-  const TIER_ORDER = ['backbone', 'crew', 'core'];
-  const result = { backbone: {}, crew: {}, core: {} };
+  // Fixed tier order: core → backbone → crew
+  const TIER_ORDER = ['core', 'backbone', 'crew'];
+  const result = { core: {}, backbone: {}, crew: {} };
 
   members.forEach(m => {
     const tier = m.tier.toLowerCase().trim();
