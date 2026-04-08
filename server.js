@@ -1,5 +1,5 @@
 'use strict';
-require('dotenv').config();
+require('dotenv').config(); // loads .env
 
 const http = require('http');
 const createApp = require('./src/app');
