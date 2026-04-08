@@ -21,6 +21,7 @@ const adminRoutes = require('./features/admin/admin.routes');
 const uploadRoutes = require('./features/upload/upload.routes');
 const pricingRoutes = require('./features/pricing/pricing.routes');
 const webRoutes = require('./features/web/web.routes');
+const applicationRoutes = require('./features/applications/applications.routes');
 
 const createApp = () => {
   const app = express();
@@ -81,6 +82,7 @@ const createApp = () => {
   app.use('/api/v1/upload', uploadRoutes);
   app.use('/api/v1/pricing', pricingRoutes);
   app.use('/api/v1/web', webRoutes);    // Web-site content (Team, Blog, CookiePolicy)
+  app.use('/api/v1/applications', applicationRoutes); // Job applications
 
   // ── 404 Handler ──────────────────────────────────────────────────────────────
   app.use((req, res) => {
