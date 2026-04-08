@@ -27,7 +27,8 @@ const createApp = () => {
   const app = express();
 
   // ── Security & Logging ──────────────────────────────────────────────────────
-  app.use(helmet());
+  // CORS must be registered BEFORE helmet so preflight OPTIONS requests
+  // are handled correctly and not blocked by helmet's security headers.
 
   // Build the allowed-origins list from env (trimmed, no empties)
   // Production origins are always included so the server works even if
@@ -46,17 +47,24 @@ const createApp = () => {
   // Always merge env origins with production origins (deduped)
   const _allowedOrigins = [...new Set([..._envOrigins, ...PRODUCTION_ORIGINS])];
 
-  app.use(cors({
+  const corsOptions = {
     origin: (origin, callback) => {
-      // Allow server-to-server, mobile apps, Postman, etc. (no Origin header)
       if (!origin) return callback(null, true);
-      // Wildcard → reflect the requesting origin back
       if (_allowedOrigins.includes('*')) return callback(null, origin);
-      // Strict whitelist check
       if (_allowedOrigins.includes(origin)) return callback(null, origin);
       callback(new Error(`CORS: origin '${origin}' not allowed`));
     },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  };
+
+  // Handle preflight for ALL routes
+  app.options('*', cors(corsOptions));
+  app.use(cors(corsOptions));
+
+  app.use(helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
   }));
   app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
