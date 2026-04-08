@@ -29,24 +29,30 @@ const createApp = () => {
   app.use(helmet());
 
   // Build the allowed-origins list from env (trimmed, no empties)
-  const _rawOrigins = (process.env.ALLOWED_ORIGINS || '')
+  // Production origins are always included so the server works even if
+  // ALLOWED_ORIGINS env var is missing or only has dev origins.
+  const PRODUCTION_ORIGINS = [
+    'https://rabin-admin.vercel.app',
+    'https://rabinsphotography.com',
+    'https://www.rabinsphotography.com',
+  ];
+
+  const _envOrigins = (process.env.ALLOWED_ORIGINS || '')
     .split(',')
     .map((o) => o.trim())
     .filter(Boolean);
 
+  // Always merge env origins with production origins (deduped)
+  const _allowedOrigins = [...new Set([..._envOrigins, ...PRODUCTION_ORIGINS])];
+
   app.use(cors({
-    // Function-based origin is required when credentials:true is set.
-    // Using a static '*' string with credentials:true violates the CORS spec
-    // and causes browsers to block ALL preflight responses.
     origin: (origin, callback) => {
       // Allow server-to-server, mobile apps, Postman, etc. (no Origin header)
       if (!origin) return callback(null, true);
-      // Wildcard or empty list → reflect the requesting origin back
-      if (_rawOrigins.length === 0 || _rawOrigins.includes('*')) {
-        return callback(null, origin);
-      }
+      // Wildcard → reflect the requesting origin back
+      if (_allowedOrigins.includes('*')) return callback(null, origin);
       // Strict whitelist check
-      if (_rawOrigins.includes(origin)) return callback(null, origin);
+      if (_allowedOrigins.includes(origin)) return callback(null, origin);
       callback(new Error(`CORS: origin '${origin}' not allowed`));
     },
     credentials: true,
