@@ -13,22 +13,30 @@ const CareerPost = require('../../models/CareerPost');
  * Returns team members grouped by tier → position for the website.
  */
 exports.getTeam = async (req, res) => {
-  const members = await TeamMember.find().sort({ tier: 1, position: 1, order: 1, name: 1 });
+  const members = await TeamMember.find().sort({ order: 1, name: 1 });
 
-  // Group into { backbone: { cinematography: [...], ... }, crew: { ... }, core: { ... } }
-  const result = {};
+  // Fixed tier order: backbone → crew → core
+  const TIER_ORDER = ['backbone', 'crew', 'core'];
+  const result = { backbone: {}, crew: {}, core: {} };
+
   members.forEach(m => {
-    const tier = m.tier.toLowerCase();
-    const pos  = m.position;
+    const tier = m.tier.toLowerCase().trim();
+    const pos = m.position.trim();
+    // Only include known tiers
     if (!result[tier]) result[tier] = {};
     if (!result[tier][pos]) result[tier][pos] = [];
     result[tier][pos].push({
-      _id:      m._id,
-      name:     m.name,
-      image:    m.imageUrl,
+      _id: m._id,
+      name: m.name,
+      image: m.imageUrl,
       position: m.position,
-      tier:     m.tier,
+      tier: m.tier,
     });
+  });
+
+  // Remove empty tiers from response
+  TIER_ORDER.forEach(t => {
+    if (Object.keys(result[t]).length === 0) delete result[t];
   });
 
   res.json({ success: true, data: result });
@@ -59,9 +67,9 @@ exports.addTeamMember = async (req, res) => {
 exports.updateTeamMember = async (req, res) => {
   const { tier, position, name, imageUrl, order } = req.body;
   const update = {};
-  if (tier)     update.tier = tier.toUpperCase();
+  if (tier) update.tier = tier.toUpperCase();
   if (position) update.position = position;
-  if (name)     update.name = name;
+  if (name) update.name = name;
   if (imageUrl) update.imageUrl = imageUrl;
   if (order !== undefined) update.order = order;
 
