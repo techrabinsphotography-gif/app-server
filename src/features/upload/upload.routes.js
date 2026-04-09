@@ -74,6 +74,7 @@ router.post('/resume', (req, res, next) => {
     {
       folder: 'robin-studio/resumes',
       resource_type: 'raw',
+      access_mode: 'public',
       public_id: `resume_${Date.now()}_${req.file.originalname.replace(/\s+/g, '_')}`,
     },
     (error, result) => {

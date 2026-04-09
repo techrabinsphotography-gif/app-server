@@ -109,7 +109,28 @@ exports.rejectApplication = async (req, res) => {
   res.json({ success: true, data: app, message: 'Application rejected' });
 };
 
-// ── ADMIN: Delete application ─────────────────────────────────────────────────
+// ── ADMIN: Get signed URL for resume ─────────────────────────────────────────
+exports.getResumeSignedUrl = async (req, res) => {
+  const app = await JobApplication.findById(req.params.id);
+  if (!app) return res.status(404).json({ success: false, message: 'Application not found' });
+
+  // Extract public_id from the stored URL
+  // URL format: https://res.cloudinary.com/{cloud}/raw/upload/v{ver}/{public_id}
+  const cloudinary = require('../../config/cloudinary');
+  const url = app.resumeUrl;
+  const match = url.match(/\/raw\/upload\/(?:v\d+\/)?(.+)$/);
+  if (!match) return res.json({ success: true, url: app.resumeUrl });
+
+  const publicId = match[1];
+  const signedUrl = cloudinary.url(publicId, {
+    resource_type: 'raw',
+    type: 'upload',
+    sign_url: true,
+    expires_at: Math.floor(Date.now() / 1000) + 3600, // 1 hour
+  });
+
+  res.json({ success: true, url: signedUrl });
+};
 exports.deleteApplication = async (req, res) => {
   await JobApplication.findByIdAndDelete(req.params.id);
   res.json({ success: true, message: 'Application deleted' });

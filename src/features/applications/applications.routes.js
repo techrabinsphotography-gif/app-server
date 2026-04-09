@@ -11,6 +11,7 @@ router.post('/', ctrl.submitApplication);
 // ADMIN only
 router.use(authenticate, authorize('ADMIN'));
 router.get('/', ctrl.listApplications);
+router.get('/:id/resume', ctrl.getResumeSignedUrl);
 router.patch('/:id/approve', ctrl.approveApplication);
 router.patch('/:id/reject', ctrl.rejectApplication);
 router.delete('/:id', ctrl.deleteApplication);
