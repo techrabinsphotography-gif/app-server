@@ -52,11 +52,14 @@ const createApp = () => {
       if (!origin) return callback(null, true);
       if (_allowedOrigins.includes('*')) return callback(null, origin);
       if (_allowedOrigins.includes(origin)) return callback(null, origin);
+      // In development or if list is somehow empty, allow all
+      if (_allowedOrigins.length === 0) return callback(null, origin);
       callback(new Error(`CORS: origin '${origin}' not allowed`));
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
+    optionsSuccessStatus: 200,
   };
 
   // Handle preflight for ALL routes
