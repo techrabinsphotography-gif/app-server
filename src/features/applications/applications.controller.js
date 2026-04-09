@@ -145,7 +145,7 @@ exports.getResumeSignedUrl = async (req, res) => {
       return res.redirect(fileUrl);
     }
     res.setHeader('Content-Type', contentType);
-    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     proxyRes.pipe(res);
   });
 
