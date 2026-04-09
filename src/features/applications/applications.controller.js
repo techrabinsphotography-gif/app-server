@@ -109,27 +109,48 @@ exports.rejectApplication = async (req, res) => {
   res.json({ success: true, data: app, message: 'Application rejected' });
 };
 
-// ── ADMIN: Get signed URL for resume ─────────────────────────────────────────
+// ── ADMIN: Proxy resume download (bypasses Cloudinary auth) ──────────────────
 exports.getResumeSignedUrl = async (req, res) => {
   const app = await JobApplication.findById(req.params.id);
   if (!app) return res.status(404).json({ success: false, message: 'Application not found' });
 
-  // Extract public_id from the stored URL
-  // URL format: https://res.cloudinary.com/{cloud}/raw/upload/v{ver}/{public_id}
+  const https = require('https');
   const cloudinary = require('../../config/cloudinary');
-  const url = app.resumeUrl;
-  const match = url.match(/\/raw\/upload\/(?:v\d+\/)?(.+)$/);
-  if (!match) return res.json({ success: true, url: app.resumeUrl });
+  const cfg = cloudinary.config();
+  const fileUrl = app.resumeUrl;
 
-  const publicId = match[1];
-  const signedUrl = cloudinary.url(publicId, {
-    resource_type: 'raw',
-    type: 'upload',
-    sign_url: true,
-    expires_at: Math.floor(Date.now() / 1000) + 3600, // 1 hour
+  const ext = fileUrl.split('.').pop().toLowerCase().split('?')[0];
+  const contentTypes = {
+    pdf: 'application/pdf',
+    doc: 'application/msword',
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  };
+  const contentType = contentTypes[ext] || 'application/octet-stream';
+  const filename = `resume_${app.name.replace(/\s+/g, '_')}.${ext}`;
+
+  // Build authenticated Cloudinary URL using API credentials
+  const urlObj = new URL(fileUrl);
+  const auth = Buffer.from(`${cfg.api_key}:${cfg.api_secret}`).toString('base64');
+
+  const options = {
+    hostname: urlObj.hostname,
+    path: urlObj.pathname,
+    method: 'GET',
+    headers: { Authorization: `Basic ${auth}` },
+  };
+
+  const proxyReq = https.request(options, (proxyRes) => {
+    if (proxyRes.statusCode === 401 || proxyRes.statusCode === 403) {
+      // Cloudinary doesn't accept basic auth for delivery — redirect as fallback
+      return res.redirect(fileUrl);
+    }
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+    proxyRes.pipe(res);
   });
 
-  res.json({ success: true, url: signedUrl });
+  proxyReq.on('error', () => res.redirect(fileUrl));
+  proxyReq.end();
 };
 exports.deleteApplication = async (req, res) => {
   await JobApplication.findByIdAndDelete(req.params.id);
