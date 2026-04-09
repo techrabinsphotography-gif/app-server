@@ -114,43 +114,33 @@ exports.getResumeSignedUrl = async (req, res) => {
   const app = await JobApplication.findById(req.params.id);
   if (!app) return res.status(404).json({ success: false, message: 'Application not found' });
 
-  const https = require('https');
   const cloudinary = require('../../config/cloudinary');
-  const cfg = cloudinary.config();
   const fileUrl = app.resumeUrl;
 
-  const ext = fileUrl.split('.').pop().toLowerCase().split('?')[0];
+  // Extract public_id from URL
+  // e.g. https://res.cloudinary.com/dlalsmidm/raw/upload/v123/robin-studio/resumes/resume_xxx.pdf
+  const match = fileUrl.match(/\/raw\/upload\/(?:v\d+\/)?(.+)$/);
+  if (!match) {
+    return res.status(400).json({ success: false, message: 'Cannot parse resume URL' });
+  }
+
+  const publicId = match[1];
+  const ext = publicId.split('.').pop().toLowerCase();
   const contentTypes = {
     pdf: 'application/pdf',
     doc: 'application/msword',
     docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   };
-  const contentType = contentTypes[ext] || 'application/octet-stream';
-  const filename = `resume_${app.name.replace(/\s+/g, '_')}.${ext}`;
 
-  // Build authenticated Cloudinary URL using API credentials
-  const urlObj = new URL(fileUrl);
-  const auth = Buffer.from(`${cfg.api_key}:${cfg.api_secret}`).toString('base64');
-
-  const options = {
-    hostname: urlObj.hostname,
-    path: urlObj.pathname,
-    method: 'GET',
-    headers: { Authorization: `Basic ${auth}` },
-  };
-
-  const proxyReq = https.request(options, (proxyRes) => {
-    if (proxyRes.statusCode === 401 || proxyRes.statusCode === 403) {
-      // Cloudinary doesn't accept basic auth for delivery — redirect as fallback
-      return res.redirect(fileUrl);
-    }
-    res.setHeader('Content-Type', contentType);
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    proxyRes.pipe(res);
+  // Generate a private download URL (signed, expires in 1 hour)
+  const downloadUrl = cloudinary.utils.private_download_url(publicId, ext, {
+    resource_type: 'raw',
+    expires_at: Math.floor(Date.now() / 1000) + 3600,
+    attachment: true,
   });
 
-  proxyReq.on('error', () => res.redirect(fileUrl));
-  proxyReq.end();
+  // Redirect browser to the signed download URL
+  res.redirect(downloadUrl);
 };
 exports.deleteApplication = async (req, res) => {
   await JobApplication.findByIdAndDelete(req.params.id);
