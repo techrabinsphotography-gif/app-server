@@ -44,15 +44,20 @@ const resumeStorage = multer.memoryStorage();
 
 const resumeUpload = multer({
   storage: resumeStorage,
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2 MB max
   fileFilter: (req, file, cb) => {
-    const allowed = [
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    const allowedMimes = [
+      'application/msword',                                                        // .doc
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',  // .docx
+      'image/jpeg',                                                                // .jpg / .jpeg
     ];
-    if (allowed.includes(file.mimetype)) return cb(null, true);
-    cb(new Error('Only PDF, DOC, and DOCX files are allowed'));
+    const allowedExts = ['.doc', '.docx', '.jpg', '.jpeg'];
+    const ext = '.' + file.originalname.split('.').pop().toLowerCase();
+
+    if (allowedMimes.includes(file.mimetype) || allowedExts.includes(ext)) {
+      return cb(null, true);
+    }
+    cb(new Error('Only DOC, DOCX, JPG, and JPEG files are allowed'));
   },
 });
 
@@ -69,11 +74,12 @@ router.post('/resume', (req, res, next) => {
   if (!req.file) {
     return res.status(400).json({ success: false, message: 'No file uploaded' });
   }
-  // Stream buffer directly to Cloudinary as raw resource
+  // Stream buffer directly to Cloudinary
+  const isImage = ['image/jpeg'].includes(req.file.mimetype);
   const stream = cloudinary.uploader.upload_stream(
     {
       folder: 'robin-studio/resumes',
-      resource_type: 'raw',
+      resource_type: isImage ? 'image' : 'raw',
       access_mode: 'public',
       public_id: `resume_${Date.now()}_${req.file.originalname.replace(/\s+/g, '_')}`,
     },
