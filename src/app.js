@@ -82,6 +82,17 @@ const createApp = () => {
     res.json({ status: 'ok', env: process.env.NODE_ENV, timestamp: new Date().toISOString() });
   });
 
+  // ── Debug: outbound IP (remove after SMTP is working) ────────────────────────
+  app.get('/debug-ip', async (req, res) => {
+    try {
+      const r = await fetch('https://api.ipify.org?format=json');
+      const data = await r.json();
+      res.json({ outboundIp: data.ip });
+    } catch (e) {
+      res.json({ error: e.message });
+    }
+  });
+
   // ── API Routes ───────────────────────────────────────────────────────────────
   app.use('/api/v1/auth', authRoutes);
   app.use('/api/v1/services', servicesRoutes);
