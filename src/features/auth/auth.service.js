@@ -110,7 +110,66 @@ const verifyEmail = async (token) => {
   await user.save({ validateBeforeSave: false });
 };
 
-// ─── Internal helper ──────────────────────────────────────────────────────────
+// ─── OTP Login ───────────────────────────────────────────────────────────────
+const sendOtp = async (email) => {
+  // Find or auto-create user by email (passwordless flow)
+  let user = await User.findOne({ email });
+  if (!user) {
+    // Create a minimal user — no password needed for OTP flow
+    const randomPass = crypto.randomBytes(16).toString('hex');
+    user = await User.create({
+      name: email.split('@')[0], // default name from email
+      email,
+      passwordHash: randomPass,
+    });
+  }
+
+  // Generate 4-digit OTP
+  const otp = String(Math.floor(1000 + Math.random() * 9000));
+  const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
+
+  user.passwordResetToken = `otp:${otpHash}`;
+  user.passwordResetExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+  await user.save({ validateBeforeSave: false });
+
+  await sendMail(
+    email,
+    'Your Robin Studio login code',
+    `
+    <div style="font-family:sans-serif;max-width:400px;margin:auto;padding:32px;background:#0f1b2e;color:#fff;border-radius:12px;">
+      <h2 style="color:#FF8E3C;margin-bottom:8px;">Robin Studio</h2>
+      <p style="color:rgba(255,255,255,0.7);margin-bottom:24px;">Your one-time login code:</p>
+      <div style="font-size:42px;font-weight:bold;letter-spacing:12px;text-align:center;color:#fff;background:#1a2a3a;padding:20px;border-radius:10px;">${otp}</div>
+      <p style="color:rgba(255,255,255,0.4);font-size:12px;margin-top:20px;text-align:center;">Valid for 10 minutes. Do not share this code.</p>
+    </div>
+    `
+  );
+};
+
+const verifyOtp = async (email, otp) => {
+  const user = await User.findOne({
+    email,
+    passwordResetExpires: { $gt: new Date() },
+  });
+  if (!user || !user.passwordResetToken?.startsWith('otp:')) {
+    throw new AppError('OTP expired or not found. Please request a new one.', 400);
+  }
+
+  const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
+  const storedHash = user.passwordResetToken.replace('otp:', '');
+
+  if (otpHash !== storedHash) {
+    throw new AppError('Invalid OTP', 400);
+  }
+
+  // Clear OTP fields
+  user.passwordResetToken = null;
+  user.passwordResetExpires = null;
+  user.isEmailVerified = true;
+  await user.save({ validateBeforeSave: false });
+
+  return _issueTokens(user);
+};
 const _issueTokens = async (user) => {
   const accessToken = signAccess(user._id.toString(), user.role);
   const refreshToken = signRefresh(user._id.toString());
@@ -124,4 +183,4 @@ const _issueTokens = async (user) => {
   return { accessToken, refreshToken, user };
 };
 
-module.exports = { register, login, refresh, logout, forgotPassword, resetPassword, verifyEmail };
+module.exports = { register, login, refresh, logout, forgotPassword, resetPassword, verifyEmail, sendOtp, verifyOtp };

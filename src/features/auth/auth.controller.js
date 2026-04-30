@@ -65,4 +65,20 @@ const verifyEmail = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-module.exports = { register, login, refreshToken, logout, forgotPassword, resetPassword, verifyEmail };
+const sendOtp = async (req, res, next) => {
+  try {
+    await authService.sendOtp(req.body.email);
+    sendSuccess(res, {}, 'OTP sent to your email');
+  } catch (err) { next(err); }
+};
+
+const verifyOtp = async (req, res, next) => {
+  try {
+    const { email, otp } = req.body;
+    const { accessToken, refreshToken, user } = await authService.verifyOtp(email, otp);
+    res.cookie('refreshToken', refreshToken, REFRESH_COOKIE_OPTS);
+    sendSuccess(res, { accessToken, user }, 'Logged in successfully');
+  } catch (err) { next(err); }
+};
+
+module.exports = { register, login, refreshToken, logout, forgotPassword, resetPassword, verifyEmail, sendOtp, verifyOtp };
