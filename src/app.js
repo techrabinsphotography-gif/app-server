@@ -82,14 +82,22 @@ const createApp = () => {
     res.json({ status: 'ok', env: process.env.NODE_ENV, timestamp: new Date().toISOString() });
   });
 
-  // ── Debug: outbound IP (remove after SMTP is working) ────────────────────────
-  app.get('/debug-ip', async (req, res) => {
+  // ── Debug: SMTP test (remove after fixing) ───────────────────────────────────
+  app.get('/debug-smtp', async (req, res) => {
     try {
-      const r = await fetch('https://api.ipify.org?format=json');
-      const data = await r.json();
-      res.json({ outboundIp: data.ip });
+      const nodemailer = require('nodemailer');
+      const t = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT) || 587,
+        secure: false,
+        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+      });
+      await t.verify();
+      res.json({ smtp: 'OK', user: process.env.SMTP_USER, host: process.env.SMTP_HOST });
     } catch (e) {
-      res.json({ error: e.message });
+      res.json({ smtp: 'FAILED', error: e.message, user: process.env.SMTP_USER, host: process.env.SMTP_HOST });
     }
   });
 
