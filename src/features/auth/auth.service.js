@@ -132,18 +132,23 @@ const sendOtp = async (email) => {
   user.passwordResetExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 min
   await user.save({ validateBeforeSave: false });
 
-  await sendMail(
-    email,
-    'Your Robin Studio login code',
-    `
-    <div style="font-family:sans-serif;max-width:400px;margin:auto;padding:32px;background:#0f1b2e;color:#fff;border-radius:12px;">
-      <h2 style="color:#FF8E3C;margin-bottom:8px;">Robin Studio</h2>
-      <p style="color:rgba(255,255,255,0.7);margin-bottom:24px;">Your one-time login code:</p>
-      <div style="font-size:42px;font-weight:bold;letter-spacing:12px;text-align:center;color:#fff;background:#1a2a3a;padding:20px;border-radius:10px;">${otp}</div>
-      <p style="color:rgba(255,255,255,0.4);font-size:12px;margin-top:20px;text-align:center;">Valid for 10 minutes. Do not share this code.</p>
-    </div>
-    `
-  );
+  try {
+    await sendMail(
+      email,
+      'Your Robin Studio login code',
+      `
+      <div style="font-family:sans-serif;max-width:400px;margin:auto;padding:32px;background:#0f1b2e;color:#fff;border-radius:12px;">
+        <h2 style="color:#FF8E3C;margin-bottom:8px;">Robin Studio</h2>
+        <p style="color:rgba(255,255,255,0.7);margin-bottom:24px;">Your one-time login code:</p>
+        <div style="font-size:42px;font-weight:bold;letter-spacing:12px;text-align:center;color:#fff;background:#1a2a3a;padding:20px;border-radius:10px;">${otp}</div>
+        <p style="color:rgba(255,255,255,0.4);font-size:12px;margin-top:20px;text-align:center;">Valid for 10 minutes. Do not share this code.</p>
+      </div>
+      `
+    );
+  } catch (mailErr) {
+    console.error('[sendOtp] Mail failed:', mailErr.message);
+    throw new AppError('Failed to send OTP email. Please try again later.', 500);
+  }
 };
 
 const verifyOtp = async (email, otp) => {
