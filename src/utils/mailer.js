@@ -1,30 +1,47 @@
 const nodemailer = require('nodemailer');
-
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT) || 587,
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-  connectionTimeout: 10000,  // 10s to connect
-  greetingTimeout: 10000,    // 10s for greeting
-  socketTimeout: 15000,      // 15s for socket
-});
+const https = require('https');
 
 /**
- * Send an email
- * @param {string} to
- * @param {string} subject
- * @param {string} html
+ * Send an email via Brevo HTTP API (avoids SMTP port blocking)
  */
 const sendMail = async (to, subject, html) => {
-  await transporter.sendMail({
-    from: `"Robin Studio" <${process.env.FROM_EMAIL}>`,
-    to,
+  const payload = JSON.stringify({
+    sender: { name: 'Robin Studio', email: process.env.FROM_EMAIL || 'noreply@robinstudio.com' },
+    to: [{ email: to }],
     subject,
-    html,
+    htmlContent: html,
+  });
+
+  return new Promise((resolve, reject) => {
+    const req = https.request(
+      {
+        hostname: 'api.brevo.com',
+        path: '/v3/smtp/email',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'api-key': process.env.BREVO_API_KEY,
+          'Content-Length': Buffer.byteLength(payload),
+        },
+      },
+      (res) => {
+        let data = '';
+        res.on('data', (chunk) => (data += chunk));
+        res.on('end', () => {
+          if (res.statusCode >= 200 && res.statusCode < 300) {
+            resolve(data);
+          } else {
+            reject(new Error(`Brevo API error ${res.statusCode}: ${data}`));
+          }
+        });
+      }
+    );
+    req.on('error', reject);
+    req.setTimeout(15000, () => {
+      req.destroy(new Error('Brevo API request timeout'));
+    });
+    req.write(payload);
+    req.end();
   });
 };
 
