@@ -82,22 +82,14 @@ const createApp = () => {
     res.json({ status: 'ok', env: process.env.NODE_ENV, timestamp: new Date().toISOString() });
   });
 
-  // ── Debug: SMTP test (remove after fixing) ───────────────────────────────────
-  app.get('/debug-smtp', async (req, res) => {
+  // ── Debug: test Brevo API from server ───────────────────────────────────────
+  app.get('/debug-brevo', async (req, res) => {
     try {
-      const nodemailer = require('nodemailer');
-      const t = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: Number(process.env.SMTP_PORT) || 587,
-        secure: false,
-        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-        connectionTimeout: 10000,
-        greetingTimeout: 10000,
-      });
-      await t.verify();
-      res.json({ smtp: 'OK', user: process.env.SMTP_USER, host: process.env.SMTP_HOST });
+      const { sendMail } = require('./utils/mailer');
+      await sendMail('suddhajit2@gmail.com', 'Test OTP Email', '<p>Test from Render - Brevo API working!</p>');
+      res.json({ status: 'sent', apiKey: process.env.BREVO_API_KEY ? 'set' : 'MISSING' });
     } catch (e) {
-      res.json({ smtp: 'FAILED', error: e.message, user: process.env.SMTP_USER, host: process.env.SMTP_HOST });
+      res.json({ status: 'failed', error: e.message, apiKey: process.env.BREVO_API_KEY ? 'set' : 'MISSING' });
     }
   });
 
