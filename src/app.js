@@ -77,7 +77,12 @@ const createApp = () => {
   app.use(express.urlencoded({ extended: true }));
   app.use(cookieParser());
 
-  // ── Health Check ─────────────────────────────────────────────────────────────
+  // ── Keep-alive ping (prevents Render free tier from sleeping) ────────────────
+  setInterval(async () => {
+    try {
+      await fetch('https://app-server-maaw.onrender.com/health');
+    } catch (_) { }
+  }, 14 * 60 * 1000); // every 14 minutes
   app.get('/health', (req, res) => {
     res.json({ status: 'ok', env: process.env.NODE_ENV, timestamp: new Date().toISOString() });
   });
