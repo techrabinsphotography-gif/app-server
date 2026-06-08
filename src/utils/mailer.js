@@ -6,7 +6,7 @@ const https = require('https');
  */
 const sendMail = async (to, subject, html) => {
   const payload = JSON.stringify({
-    sender: { name: "Robin's Photography", email: process.env.FROM_EMAIL || 'noreply@robinstudio.com' },
+    sender: { name: "Rabin's Photography", email: process.env.FROM_EMAIL || 'noreply@rabinstudio.com' },
     to: [{ email: to }],
     subject,
     htmlContent: html,
