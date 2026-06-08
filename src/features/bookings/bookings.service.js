@@ -32,9 +32,12 @@ const createBooking = async (userId, body) => {
   const pkg = await Package.findById(packageId);
   if (!pkg) throw new AppError('Package not found', 404);
 
-  // Calculate pricing
+  // ── Pricing: flat base price + extra days beyond included days + extras ──
   const numDays = 1 + (Array.isArray(additionalDates) ? additionalDates.length : 0);
-  const baseAmount = pkg.price * numDays;
+  const baseDays = pkg.baseDays || 1;
+  const edRate = pkg.extraDayPrice || 0;
+  const extraDays = Math.max(0, numDays - baseDays);
+  const baseAmount = pkg.price + (extraDays * edRate);   // flat + extra day charges
   const addonsAmount = Array.isArray(addons)
     ? addons.reduce((sum, a) => sum + (Number(a.price) || 0), 0)
     : 0;

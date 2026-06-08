@@ -1,7 +1,7 @@
 'use strict';
 const express = require('express');
 const Package = require('../../models/Package');
-const Addon   = require('../../models/Addon');
+const Addon = require('../../models/Addon');
 const PhotoService = require('../../models/PhotoService');
 const { AppError } = require('../../utils/apiResponse');
 
@@ -22,11 +22,20 @@ router.get('/packages', async (req, res, next) => {
 // POST /api/v1/pricing/packages  — create a package
 router.post('/packages', async (req, res, next) => {
   try {
-    const { serviceId, tier, name, price, features, sessionHours, edited } = req.body;
+    const { serviceId, tier, name, price, features, sessionHours, edited, baseDays, extraDayPrice } = req.body;
     if (!serviceId || !tier || !name || price == null) {
       throw new AppError('serviceId, tier, name and price are required', 400);
     }
-    const pkg = await Package.create({ serviceId, tier, name, price, features: features || [], sessionHours: sessionHours || 0, edited: edited || 0 });
+    // Default baseDays by tier if not provided
+    const defaultBaseDays = (tier === 'GOLD') ? 4 : (tier === 'BRONZE' || tier === 'SILVER') ? 3 : 1;
+    const pkg = await Package.create({
+      serviceId, tier, name, price,
+      features: features || [],
+      sessionHours: sessionHours || 0,
+      edited: edited || 0,
+      baseDays: baseDays != null ? baseDays : defaultBaseDays,
+      extraDayPrice: extraDayPrice != null ? extraDayPrice : 0,
+    });
     res.status(201).json({ success: true, data: pkg });
   } catch (err) { next(err); }
 });
