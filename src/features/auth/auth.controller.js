@@ -5,7 +5,7 @@ const REFRESH_COOKIE_OPTS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
   sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
 };
 
 const register = async (req, res, next) => {
@@ -13,7 +13,8 @@ const register = async (req, res, next) => {
     const { name, email, password } = req.body;
     const { accessToken, refreshToken, user } = await authService.register({ name, email, password });
     res.cookie('refreshToken', refreshToken, REFRESH_COOKIE_OPTS);
-    sendSuccess(res, { accessToken, user }, 'Registered successfully', 201);
+    // Include refreshToken in body so mobile app can store it
+    sendSuccess(res, { accessToken, refreshToken, user }, 'Registered successfully', 201);
   } catch (err) { next(err); }
 };
 
@@ -22,22 +23,24 @@ const login = async (req, res, next) => {
     const { email, password } = req.body;
     const { accessToken, refreshToken, user } = await authService.login({ email, password });
     res.cookie('refreshToken', refreshToken, REFRESH_COOKIE_OPTS);
-    sendSuccess(res, { accessToken, user }, 'Logged in');
+    sendSuccess(res, { accessToken, refreshToken, user }, 'Logged in');
   } catch (err) { next(err); }
 };
 
 const refreshToken = async (req, res, next) => {
   try {
-    const raw = req.cookies?.refreshToken;
+    // Accept token from cookie (web) OR request body (mobile)
+    const raw = req.cookies?.refreshToken || req.body?.refreshToken;
     const { accessToken, refreshToken: newRt, user } = await authService.refresh(raw);
     res.cookie('refreshToken', newRt, REFRESH_COOKIE_OPTS);
-    sendSuccess(res, { accessToken, user }, 'Token refreshed');
+    sendSuccess(res, { accessToken, refreshToken: newRt, user }, 'Token refreshed');
   } catch (err) { next(err); }
 };
 
 const logout = async (req, res, next) => {
   try {
-    const raw = req.cookies?.refreshToken;
+    // Accept token from cookie (web) OR request body (mobile)
+    const raw = req.cookies?.refreshToken || req.body?.refreshToken;
     await authService.logout(raw);
     res.clearCookie('refreshToken');
     sendSuccess(res, {}, 'Logged out');
@@ -77,7 +80,8 @@ const verifyOtp = async (req, res, next) => {
     const { email, otp } = req.body;
     const { accessToken, refreshToken, user } = await authService.verifyOtp(email, otp);
     res.cookie('refreshToken', refreshToken, REFRESH_COOKIE_OPTS);
-    sendSuccess(res, { accessToken, user }, 'Logged in successfully');
+    // Include refreshToken in body so mobile app can store it
+    sendSuccess(res, { accessToken, refreshToken, user }, 'Logged in successfully');
   } catch (err) { next(err); }
 };
 

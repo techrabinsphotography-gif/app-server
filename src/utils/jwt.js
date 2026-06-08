@@ -10,11 +10,11 @@ const signAccess = (userId, role) =>
   });
 
 /**
- * Sign a long-lived refresh token (7 days)
+ * Sign a long-lived refresh token (30 days — user stays logged in for 30 days)
  */
 const signRefresh = (userId) =>
   jwt.sign({ sub: userId }, process.env.JWT_REFRESH_SECRET, {
-    expiresIn: '7d',
+    expiresIn: '30d',
     issuer: 'robin-app',
   });
 
