@@ -21,7 +21,7 @@ const register = async ({ name, email, password }) => {
   const verifyUrl = `${process.env.BASE_URL || 'http://localhost:5000'}/api/v1/auth/verify-email/${emailVerifyToken}`;
   await sendMail(
     email,
-    'Verify your Robin Studio account',
+    "Verify your Robin's Photography account",
     `<p>Hi ${name},</p><p>Please verify your email: <a href="${verifyUrl}">${verifyUrl}</a></p>`
   ).catch(() => { }); // don't block registration if mail fails
 
@@ -81,7 +81,7 @@ const forgotPassword = async (email) => {
   const resetUrl = `${process.env.BASE_URL || 'http://localhost:5000'}/api/v1/auth/reset-password/${token}`;
   await sendMail(
     email,
-    'Reset your Robin Studio password',
+    "Reset your Robin's Photography password",
     `<p>Reset link (valid 30 min): <a href="${resetUrl}">${resetUrl}</a></p>`
   );
 };
@@ -135,10 +135,10 @@ const sendOtp = async (email) => {
   try {
     await sendMail(
       email,
-      'Your Robin Studio login code',
+      "Your Robin's Photography login code",
       `
       <div style="font-family:sans-serif;max-width:400px;margin:auto;padding:32px;background:#0f1b2e;color:#fff;border-radius:12px;">
-        <h2 style="color:#FF8E3C;margin-bottom:8px;">Robin Studio</h2>
+        <h2 style="color:#FF8E3C;margin-bottom:8px;">Robin's Photography</h2>
         <p style="color:rgba(255,255,255,0.7);margin-bottom:24px;">Your one-time login code:</p>
         <div style="font-size:42px;font-weight:bold;letter-spacing:12px;text-align:center;color:#fff;background:#1a2a3a;padding:20px;border-radius:10px;">${otp}</div>
         <p style="color:rgba(255,255,255,0.4);font-size:12px;margin-top:20px;text-align:center;">Valid for 10 minutes. Do not share this code.</p>
