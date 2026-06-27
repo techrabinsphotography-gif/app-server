@@ -15,7 +15,7 @@ const jobApplicationSchema = new mongoose.Schema({
   resumePublicId: { type: String, default: '' }, // S3 object key for secure download
   status: {
     type: String,
-    enum: ['PENDING', 'SHORTLISTED', 'REJECTED', 'INTERVIEW_SCHEDULED'],
+    enum: ['PENDING', 'SHORTLISTED', 'REJECTED', 'INTERVIEW_SCHEDULED', 'HIRED'],
     default: 'PENDING',
   },
   interviewDate: { type: String, default: '' },   // e.g. "2026-07-15"

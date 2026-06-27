@@ -123,6 +123,46 @@ exports.scheduleInterview = async (req, res) => {
   res.json({ success: true, data: app, message: 'Interview scheduled and email sent' });
 };
 
+// ── ADMIN: Hire application (move to HIRED) ───────────────────────────────────
+exports.hireApplication = async (req, res) => {
+  const app = await JobApplication.findById(req.params.id);
+  if (!app) return res.status(404).json({ success: false, message: 'Application not found' });
+
+  app.status = 'HIRED';
+  await app.save();
+
+  res.json({ success: true, data: app, message: 'Candidate marked as hired' });
+};
+
+// ── ADMIN: Export hired candidates as CSV ─────────────────────────────────────
+exports.exportHiredCsv = async (req, res) => {
+  const { careerId } = req.query;
+  const filter = { status: 'HIRED' };
+  if (careerId) filter.careerId = careerId;
+
+  const hired = await JobApplication.find(filter).sort('-createdAt');
+
+  const escape = (val) => {
+    const str = String(val ?? '');
+    return str.includes(',') || str.includes('"') || str.includes('\n')
+      ? `"${str.replace(/"/g, '""')}"`
+      : str;
+  };
+
+  const header = ['Name', 'Email', 'Phone', 'Position', 'Interview Date', 'Interview Time', 'Location', 'Applied On'];
+  const rows = hired.map(a => [
+    a.name, a.email, a.phone, a.careerTitle,
+    a.interviewDate || '', a.interviewTime || '', a.interviewLocation || '',
+    new Date(a.createdAt).toLocaleDateString('en-IN'),
+  ].map(escape).join(','));
+
+  const csv = [header.join(','), ...rows].join('\r\n');
+
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="hired-candidates.csv"');
+  res.send(csv);
+};
+
 // ── ADMIN: Reject application ─────────────────────────────────────────────────
 exports.rejectApplication = async (req, res) => {
   const app = await JobApplication.findById(req.params.id);

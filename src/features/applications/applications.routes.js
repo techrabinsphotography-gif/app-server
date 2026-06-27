@@ -19,10 +19,12 @@ router.get('/:id/resume', (req, res, next) => {
 // All other routes require ADMIN
 router.use(authenticate, authorize('ADMIN'));
 router.get('/', ctrl.listApplications);
+router.get('/export/hired-csv', ctrl.exportHiredCsv);
 router.patch('/:id/approve', ctrl.approveApplication);
 router.patch('/:id/shortlist', ctrl.approveApplication);
 router.patch('/:id/schedule-interview', ctrl.scheduleInterview);
 router.patch('/:id/reject', ctrl.rejectApplication);
+router.patch('/:id/hire', ctrl.hireApplication);
 router.delete('/:id', ctrl.deleteApplication);
 
 module.exports = router;
