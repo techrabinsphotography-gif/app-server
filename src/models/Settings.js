@@ -15,6 +15,16 @@ const settingsSchema = new mongoose.Schema({
     image2: { type: String, default: '' },
     image3: { type: String, default: '' },
   },
+  blogSliderImages: {
+    image1: { type: String, default: '' },
+    image2: { type: String, default: '' },
+    image3: { type: String, default: '' },
+  },
+  aboutImages: {
+    heroBg: { type: String, default: '' },
+    portrait: { type: String, default: '' },
+    founder: { type: String, default: '' },
+  },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Settings', settingsSchema);
