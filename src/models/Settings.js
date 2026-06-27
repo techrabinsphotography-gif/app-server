@@ -8,7 +8,13 @@ const settingsSchema = new mongoose.Schema({
   }],
   appDownloads: { type: Number, default: 0 },
   contactEmail: { type: String },
-  contactPhone: { type: String }
+  contactPhone: { type: String },
+  heroVideoUrl: { type: String, default: '' },
+  bookingSectionImages: {
+    image1: { type: String, default: '' },
+    image2: { type: String, default: '' },
+    image3: { type: String, default: '' },
+  },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Settings', settingsSchema);
