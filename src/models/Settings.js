@@ -24,6 +24,7 @@ const settingsSchema = new mongoose.Schema({
     heroBg: { type: String, default: '' },
     portrait: { type: String, default: '' },
     founder: { type: String, default: '' },
+    heroVideo: { type: String, default: '' },
   },
 }, { timestamps: true });
 
