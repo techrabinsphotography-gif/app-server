@@ -10,7 +10,6 @@ const teamMemberSchema = new mongoose.Schema({
   position: {
     type: String,
     required: true,
-    // e.g. 'cinematography', 'dronePilot', 'photographer', 'cinematographer'
     trim: true,
   },
   name: {
@@ -21,6 +20,11 @@ const teamMemberSchema = new mongoose.Schema({
   imageUrl: {
     type: String,
     required: true,
+    trim: true,
+  },
+  bio: {
+    type: String,
+    default: '',
     trim: true,
   },
   order: {

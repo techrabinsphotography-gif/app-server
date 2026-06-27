@@ -35,6 +35,7 @@ exports.getTeam = async (req, res) => {
       image: m.imageUrl,
       position: m.position,
       tier: m.tier,
+      bio: m.bio || '',
     });
   });
 
@@ -51,7 +52,7 @@ exports.getTeam = async (req, res) => {
  * Body: { tier, position, name, imageUrl, order? }
  */
 exports.addTeamMember = async (req, res) => {
-  const { tier, position, name, imageUrl, order } = req.body;
+  const { tier, position, name, imageUrl, order, bio } = req.body;
   if (!tier || !position || !name || !imageUrl) {
     return res.status(400).json({ success: false, message: 'tier, position, name, and imageUrl are required' });
   }
@@ -60,6 +61,7 @@ exports.addTeamMember = async (req, res) => {
     position,
     name,
     imageUrl,
+    bio: bio || '',
     order: order || 0,
   });
   res.status(201).json({ success: true, data: member });
@@ -69,12 +71,13 @@ exports.addTeamMember = async (req, res) => {
  * ADMIN: PUT /api/v1/web/team/member/:id
  */
 exports.updateTeamMember = async (req, res) => {
-  const { tier, position, name, imageUrl, order } = req.body;
+  const { tier, position, name, imageUrl, order, bio } = req.body;
   const update = {};
   if (tier) update.tier = tier.toUpperCase();
   if (position) update.position = position;
   if (name) update.name = name;
   if (imageUrl) update.imageUrl = imageUrl;
+  if (bio !== undefined) update.bio = bio;
   if (order !== undefined) update.order = order;
 
   const member = await TeamMember.findByIdAndUpdate(req.params.id, update, { new: true });
