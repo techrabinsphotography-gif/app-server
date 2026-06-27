@@ -12,6 +12,7 @@ const jobApplicationSchema = new mongoose.Schema({
   email: { type: String, required: true, trim: true, lowercase: true },
   phone: { type: String, required: true, trim: true },
   resumeUrl: { type: String, required: true },
+  resumePublicId: { type: String, default: '' }, // S3 object key for secure download
   status: {
     type: String,
     enum: ['PENDING', 'SHORTLISTED', 'REJECTED', 'INTERVIEW_SCHEDULED'],

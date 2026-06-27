@@ -51,19 +51,19 @@ router.post('/image', (req, res, next) => {
 // ── Resume upload (private — stored in robin-studio/resumes/) ─────────────────
 const resumeUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 2 * 1024 * 1024 }, // 2 MB
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
   fileFilter: (req, file, cb) => {
     const allowedMimes = [
+      'application/pdf',
       'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'image/jpeg',
     ];
-    const allowedExts = ['.doc', '.docx', '.jpg', '.jpeg'];
+    const allowedExts = ['.pdf', '.doc', '.docx'];
     const ext = '.' + file.originalname.split('.').pop().toLowerCase();
     if (allowedMimes.includes(file.mimetype) || allowedExts.includes(ext)) {
       return cb(null, true);
     }
-    cb(new Error('Only DOC, DOCX, JPG, and JPEG files are allowed'));
+    cb(new Error('Only PDF, DOC and DOCX files are allowed'));
   },
 });
 
@@ -81,7 +81,8 @@ router.post('/resume', (req, res, next) => {
     return res.status(400).json({ success: false, message: 'No file uploaded' });
   }
 
-  const key = `robin-studio/resumes/resume_${Date.now()}_${req.file.originalname.replace(/\s+/g, '_')}`;
+  const safeName = req.file.originalname.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+  const key = `robin-studio/resumes/resume_${Date.now()}_${safeName}`;
 
   try {
     await s3.send(new PutObjectCommand({
