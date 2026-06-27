@@ -20,6 +20,8 @@ router.get('/:id/resume', (req, res, next) => {
 router.use(authenticate, authorize('ADMIN'));
 router.get('/', ctrl.listApplications);
 router.patch('/:id/approve', ctrl.approveApplication);
+router.patch('/:id/shortlist', ctrl.approveApplication);
+router.patch('/:id/schedule-interview', ctrl.scheduleInterview);
 router.patch('/:id/reject', ctrl.rejectApplication);
 router.delete('/:id', ctrl.deleteApplication);
 

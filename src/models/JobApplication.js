@@ -14,9 +14,12 @@ const jobApplicationSchema = new mongoose.Schema({
   resumeUrl: { type: String, required: true },
   status: {
     type: String,
-    enum: ['PENDING', 'APPROVED', 'REJECTED'],
+    enum: ['PENDING', 'SHORTLISTED', 'REJECTED', 'INTERVIEW_SCHEDULED'],
     default: 'PENDING',
   },
+  interviewDate: { type: String, default: '' },   // e.g. "2026-07-15"
+  interviewTime: { type: String, default: '' },   // e.g. "11:00 AM"
+  interviewLocation: { type: String, default: '' },
 }, { timestamps: true });
 
 module.exports = mongoose.model('JobApplication', jobApplicationSchema);

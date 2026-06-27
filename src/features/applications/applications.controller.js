@@ -37,15 +37,39 @@ exports.listApplications = async (req, res) => {
   res.json({ success: true, data: applications });
 };
 
-// ── ADMIN: Approve application → send email ───────────────────────────────────
+// ── ADMIN: Shortlist application (no email sent) ──────────────────────────────
 exports.approveApplication = async (req, res) => {
   const app = await JobApplication.findById(req.params.id);
   if (!app) return res.status(404).json({ success: false, message: 'Application not found' });
 
-  app.status = 'APPROVED';
+  app.status = 'SHORTLISTED';
   await app.save();
 
-  // Send congratulations email
+  res.json({ success: true, data: app, message: 'Application shortlisted' });
+};
+
+// ── ADMIN: Schedule interview → send email to candidate ───────────────────────
+exports.scheduleInterview = async (req, res) => {
+  const { interviewDate, interviewTime, interviewLocation } = req.body;
+
+  if (!interviewDate || !interviewTime) {
+    return res.status(400).json({ success: false, message: 'Interview date and time are required' });
+  }
+
+  const app = await JobApplication.findById(req.params.id);
+  if (!app) return res.status(404).json({ success: false, message: 'Application not found' });
+
+  app.status = 'INTERVIEW_SCHEDULED';
+  app.interviewDate = interviewDate;
+  app.interviewTime = interviewTime;
+  app.interviewLocation = interviewLocation || 'Rabin\'s Photography Studio, Kolkata';
+  await app.save();
+
+  // Format date nicely
+  const formattedDate = new Date(interviewDate).toLocaleDateString('en-IN', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  });
+
   const html = `
     <!DOCTYPE html>
     <html>
@@ -55,33 +79,72 @@ exports.approveApplication = async (req, res) => {
         body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }
         .wrapper { max-width: 600px; margin: 40px auto; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
         .header { background: linear-gradient(135deg, #ff4f5a, #ff8c42); padding: 40px 32px; text-align: center; }
-        .header h1 { color: #fff; margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
+        .header h1 { color: #fff; margin: 0; font-size: 26px; font-weight: 800; }
         .header p { color: rgba(255,255,255,0.85); margin: 8px 0 0; font-size: 15px; }
         .body { padding: 40px 32px; }
-        .body h2 { color: #111; font-size: 22px; margin: 0 0 12px; }
+        .body h2 { color: #111; font-size: 20px; margin: 0 0 12px; }
         .body p { color: #555; font-size: 15px; line-height: 1.7; margin: 0 0 16px; }
-        .highlight { background: #fff5f5; border-left: 4px solid #ff4f5a; padding: 16px 20px; border-radius: 0 8px 8px 0; margin: 24px 0; }
-        .highlight p { margin: 0; color: #333; font-weight: 600; }
+        .card { background: #fff8f0; border: 1.5px solid #ff8c42; border-radius: 12px; padding: 24px; margin: 24px 0; }
+        .card-row { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+        .card-row:last-child { margin-bottom: 0; }
+        .card-icon { font-size: 20px; flex-shrink: 0; }
+        .card-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #ff8c42; margin-bottom: 2px; }
+        .card-value { font-size: 16px; font-weight: 700; color: #111; }
+        .note { background: #f9f9f9; border-left: 4px solid #ff4f5a; padding: 16px 20px; border-radius: 0 8px 8px 0; margin: 24px 0; }
         .footer { background: #f9f9f9; padding: 24px 32px; text-align: center; border-top: 1px solid #eee; }
         .footer p { color: #999; font-size: 13px; margin: 0; }
-        .logo { font-size: 20px; font-weight: 900; color: #fff; letter-spacing: -0.5px; }
+        .logo { font-size: 18px; font-weight: 900; color: #fff; }
       </style>
     </head>
     <body>
       <div class="wrapper">
         <div class="header">
           <div class="logo">✦ Rabin's Photography</div>
-          <h1>Congratulations! 🎉</h1>
-          <p>Your application has been approved</p>
+          <h1>Interview Scheduled 🗓️</h1>
+          <p>You've been shortlisted for an interview</p>
         </div>
         <div class="body">
           <h2>Dear ${app.name},</h2>
-          <p>We are thrilled to inform you that your application for the position of <strong>${app.careerTitle}</strong> at Rabin's Photography has been <strong>approved</strong>.</p>
-          <div class="highlight">
-            <p>🎯 Position: ${app.careerTitle}</p>
+          <p>Congratulations! We are pleased to inform you that you have been <strong>shortlisted</strong> for the position of <strong>${app.careerTitle}</strong> at Rabin's Photography.</p>
+          <p>Your interview has been scheduled. Please find the details below:</p>
+
+          <div class="card">
+            <div class="card-row">
+              <div class="card-icon">💼</div>
+              <div>
+                <div class="card-label">Position</div>
+                <div class="card-value">${app.careerTitle}</div>
+              </div>
+            </div>
+            <div class="card-row">
+              <div class="card-icon">📅</div>
+              <div>
+                <div class="card-label">Date</div>
+                <div class="card-value">${formattedDate}</div>
+              </div>
+            </div>
+            <div class="card-row">
+              <div class="card-icon">🕐</div>
+              <div>
+                <div class="card-label">Time</div>
+                <div class="card-value">${app.interviewTime}</div>
+              </div>
+            </div>
+            <div class="card-row">
+              <div class="card-icon">📍</div>
+              <div>
+                <div class="card-label">Location</div>
+                <div class="card-value">${app.interviewLocation}</div>
+              </div>
+            </div>
           </div>
-          <p>Our team will be reaching out to you shortly with the next steps in the onboarding process. Please keep an eye on your inbox.</p>
-          <p>We are excited to have you join our creative family and look forward to working with you!</p>
+
+          <div class="note">
+            <p>📌 Please arrive 10 minutes early and carry a copy of your resume and any relevant portfolio work.</p>
+          </div>
+
+          <p>If you have any questions or need to reschedule, please reply to this email immediately.</p>
+          <p>We look forward to meeting you!</p>
           <p>Warm regards,<br/><strong>The Rabin's Photography Team</strong></p>
         </div>
         <div class="footer">
@@ -93,9 +156,13 @@ exports.approveApplication = async (req, res) => {
     </html>
   `;
 
-  await sendMail(app.email, `Congratulations! Your application for ${app.careerTitle} is Approved`, html);
+  await sendMail(
+    app.email,
+    `Interview Scheduled — ${app.careerTitle} at Rabin's Photography`,
+    html
+  );
 
-  res.json({ success: true, data: app, message: 'Application approved and email sent' });
+  res.json({ success: true, data: app, message: 'Interview scheduled and email sent' });
 };
 
 // ── ADMIN: Reject application ─────────────────────────────────────────────────
@@ -118,7 +185,6 @@ exports.getResumeSignedUrl = async (req, res) => {
   const { GetObjectCommand } = require('@aws-sdk/client-s3');
   const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 
-  // Extract the S3 key from the stored URL or publicId
   const key = app.resumePublicId || app.resumeUrl.replace(`https://${BUCKET}.s3.ap-south-1.amazonaws.com/`, '');
 
   try {
@@ -128,7 +194,6 @@ exports.getResumeSignedUrl = async (req, res) => {
       ResponseContentDisposition: `attachment; filename="resume_${app.name.replace(/\s+/g, '_')}"`,
     });
 
-    // Pre-signed URL valid for 60 seconds
     const signedUrl = await getSignedUrl(s3, command, { expiresIn: 60 });
     res.json({ success: true, url: signedUrl });
   } catch (err) {
@@ -136,6 +201,7 @@ exports.getResumeSignedUrl = async (req, res) => {
     res.status(500).json({ success: false, message: 'Could not generate download link' });
   }
 };
+
 exports.deleteApplication = async (req, res) => {
   await JobApplication.findByIdAndDelete(req.params.id);
   res.json({ success: true, message: 'Application deleted' });
