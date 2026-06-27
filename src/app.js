@@ -23,6 +23,7 @@ const pricingRoutes = require('./features/pricing/pricing.routes');
 const webRoutes = require('./features/web/web.routes');
 const applicationRoutes = require('./features/applications/applications.routes');
 const portfolioRoutes = require('./features/portfolio/portfolio.routes');
+const newsletterRoutes = require('./features/newsletter/newsletter.routes');
 
 const createApp = () => {
   const app = express();
@@ -112,6 +113,7 @@ const createApp = () => {
   app.use('/api/v1/web', webRoutes);    // Web-site content (Team, Blog, CookiePolicy)
   app.use('/api/v1/applications', applicationRoutes);
   app.use('/api/v1/portfolio', portfolioRoutes);
+  app.use('/api/v1/newsletter', newsletterRoutes);
 
   // ── 404 Handler ──────────────────────────────────────────────────────────────
   app.use((req, res) => {
