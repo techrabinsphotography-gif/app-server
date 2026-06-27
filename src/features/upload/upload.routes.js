@@ -99,4 +99,45 @@ router.post('/resume', (req, res, next) => {
   }
 });
 
+// ── Video upload (hero video) ─────────────────────────────────────────────────
+const videoStorage = multerS3({
+  s3,
+  bucket: BUCKET,
+  contentType: multerS3.AUTO_CONTENT_TYPE,
+  key: (req, file, cb) => {
+    const filename = `robin-studio/videos/${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`;
+    cb(null, filename);
+  },
+});
+
+const videoUpload = multer({
+  storage: videoStorage,
+  limits: { fileSize: 200 * 1024 * 1024 }, // 200 MB
+  fileFilter: (req, file, cb) => {
+    const allowed = ['video/mp4', 'video/webm', 'video/quicktime'];
+    if (allowed.includes(file.mimetype)) return cb(null, true);
+    cb(new Error('Only MP4, WebM and MOV videos are allowed'));
+  },
+});
+
+// POST /api/v1/upload/video
+router.post('/video', (req, res, next) => {
+  videoUpload.single('video')(req, res, (err) => {
+    if (err) {
+      console.error('VIDEO UPLOAD ERROR:', err);
+      return res.status(500).json({ success: false, message: err.message || JSON.stringify(err) });
+    }
+    next();
+  });
+}, (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ success: false, message: 'No file uploaded' });
+  }
+  res.json({
+    success: true,
+    url: req.file.location,
+    publicId: req.file.key,
+  });
+});
+
 module.exports = router;
