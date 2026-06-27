@@ -26,6 +26,10 @@ const settingsSchema = new mongoose.Schema({
     founder: { type: String, default: '' },
     heroVideo: { type: String, default: '' },
   },
+  commercialVideos: [{
+    url: { type: String, required: true },   // YouTube URL or embed URL
+    title: { type: String, default: '' },
+  }],
 }, { timestamps: true });
 
 module.exports = mongoose.model('Settings', settingsSchema);
