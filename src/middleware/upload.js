@@ -1,19 +1,26 @@
+'use strict';
 const multer = require('multer');
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const cloudinary = require('../config/cloudinary');
+const multerS3 = require('multer-s3');
+const { s3, BUCKET } = require('../config/s3');
 
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: {
-    folder: 'robin-studio',
-    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
-    transformation: [{ width: 800, crop: 'limit' }],
+const storage = multerS3({
+  s3,
+  bucket: BUCKET,
+  contentType: multerS3.AUTO_CONTENT_TYPE,
+  key: (req, file, cb) => {
+    const filename = `robin-studio/${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`;
+    cb(null, filename);
   },
 });
 
 const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB max
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (allowed.includes(file.mimetype)) return cb(null, true);
+    cb(new Error('Only JPG, PNG and WEBP images are allowed'));
+  },
 });
 
 module.exports = { upload };

@@ -1,30 +1,38 @@
 'use strict';
 const express = require('express');
 const multer = require('multer');
-const cloudinary = require('../../config/cloudinary');
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
-
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: {
-    folder: 'robin-studio/services',
-    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
-    transformation: [{ width: 1200, height: 800, crop: 'limit', quality: 'auto' }],
-  },
-});
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB max
-});
+const multerS3 = require('multer-s3');
+const { s3, BUCKET } = require('../../config/s3');
+const { PutObjectCommand } = require('@aws-sdk/client-s3');
 
 const router = express.Router();
 
+// ── Image upload (service images) ────────────────────────────────────────────
+const imageStorage = multerS3({
+  s3,
+  bucket: BUCKET,
+  contentType: multerS3.AUTO_CONTENT_TYPE,
+  key: (req, file, cb) => {
+    const filename = `robin-studio/services/${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`;
+    cb(null, filename);
+  },
+});
+
+const imageUpload = multer({
+  storage: imageStorage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (allowed.includes(file.mimetype)) return cb(null, true);
+    cb(new Error('Only JPG, PNG and WEBP images are allowed'));
+  },
+});
+
 // POST /api/v1/upload/image
 router.post('/image', (req, res, next) => {
-  upload.single('image')(req, res, (err) => {
+  imageUpload.single('image')(req, res, (err) => {
     if (err) {
-      console.error('MULTER UPLOAD ERROR:', err);
+      console.error('IMAGE UPLOAD ERROR:', err);
       return res.status(500).json({ success: false, message: err.message || JSON.stringify(err) });
     }
     next();
@@ -35,25 +43,23 @@ router.post('/image', (req, res, next) => {
   }
   res.json({
     success: true,
-    url: req.file.path,          // Cloudinary https URL
-    publicId: req.file.filename, // Cloudinary public_id
+    url: req.file.location,   // S3 public HTTPS URL
+    publicId: req.file.key,   // S3 object key (used for deletion)
   });
 });
 
-const resumeStorage = multer.memoryStorage();
-
+// ── Resume upload (private — stored in robin-studio/resumes/) ─────────────────
 const resumeUpload = multer({
-  storage: resumeStorage,
-  limits: { fileSize: 2 * 1024 * 1024 }, // 2 MB max
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2 MB
   fileFilter: (req, file, cb) => {
     const allowedMimes = [
-      'application/msword',                                                        // .doc
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',  // .docx
-      'image/jpeg',                                                                // .jpg / .jpeg
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'image/jpeg',
     ];
     const allowedExts = ['.doc', '.docx', '.jpg', '.jpeg'];
     const ext = '.' + file.originalname.split('.').pop().toLowerCase();
-
     if (allowedMimes.includes(file.mimetype) || allowedExts.includes(ext)) {
       return cb(null, true);
     }
@@ -70,28 +76,27 @@ router.post('/resume', (req, res, next) => {
     }
     next();
   });
-}, (req, res) => {
+}, async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ success: false, message: 'No file uploaded' });
   }
-  // Stream buffer directly to Cloudinary
-  const isImage = ['image/jpeg'].includes(req.file.mimetype);
-  const stream = cloudinary.uploader.upload_stream(
-    {
-      folder: 'robin-studio/resumes',
-      resource_type: isImage ? 'image' : 'raw',
-      access_mode: 'public',
-      public_id: `resume_${Date.now()}_${req.file.originalname.replace(/\s+/g, '_')}`,
-    },
-    (error, result) => {
-      if (error) {
-        console.error('CLOUDINARY RESUME ERROR:', error);
-        return res.status(500).json({ success: false, message: error.message });
-      }
-      res.json({ success: true, url: result.secure_url, publicId: result.public_id });
-    }
-  );
-  stream.end(req.file.buffer);
+
+  const key = `robin-studio/resumes/resume_${Date.now()}_${req.file.originalname.replace(/\s+/g, '_')}`;
+
+  try {
+    await s3.send(new PutObjectCommand({
+      Bucket: BUCKET,
+      Key: key,
+      Body: req.file.buffer,
+      ContentType: req.file.mimetype,
+    }));
+
+    const url = `https://${BUCKET}.s3.ap-south-1.amazonaws.com/${key}`;
+    res.json({ success: true, url, publicId: key });
+  } catch (err) {
+    console.error('S3 RESUME UPLOAD ERROR:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 module.exports = router;

@@ -109,48 +109,32 @@ exports.rejectApplication = async (req, res) => {
   res.json({ success: true, data: app, message: 'Application rejected' });
 };
 
-// ── ADMIN: Proxy resume download (bypasses Cloudinary auth) ──────────────────
+// ── ADMIN: Generate pre-signed S3 URL for resume download ────────────────────
 exports.getResumeSignedUrl = async (req, res) => {
   const app = await JobApplication.findById(req.params.id);
   if (!app) return res.status(404).json({ success: false, message: 'Application not found' });
 
-  const https = require('https');
-  const cloudinary = require('../../config/cloudinary');
-  const cfg = cloudinary.config();
-  const fileUrl = app.resumeUrl;
+  const { s3, BUCKET } = require('../../config/s3');
+  const { GetObjectCommand } = require('@aws-sdk/client-s3');
+  const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 
-  const ext = fileUrl.split('.').pop().toLowerCase().split('?')[0];
-  const contentTypes = {
-    pdf: 'application/pdf',
-    doc: 'application/msword',
-    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  };
-  const contentType = contentTypes[ext] || 'application/octet-stream';
-  const filename = `resume_${app.name.replace(/\s+/g, '_')}.${ext}`;
+  // Extract the S3 key from the stored URL or publicId
+  const key = app.resumePublicId || app.resumeUrl.replace(`https://${BUCKET}.s3.ap-south-1.amazonaws.com/`, '');
 
-  // Build authenticated Cloudinary URL using API credentials
-  const urlObj = new URL(fileUrl);
-  const auth = Buffer.from(`${cfg.api_key}:${cfg.api_secret}`).toString('base64');
+  try {
+    const command = new GetObjectCommand({
+      Bucket: BUCKET,
+      Key: key,
+      ResponseContentDisposition: `attachment; filename="resume_${app.name.replace(/\s+/g, '_')}"`,
+    });
 
-  const options = {
-    hostname: urlObj.hostname,
-    path: urlObj.pathname,
-    method: 'GET',
-    headers: { Authorization: `Basic ${auth}` },
-  };
-
-  const proxyReq = https.request(options, (proxyRes) => {
-    if (proxyRes.statusCode === 401 || proxyRes.statusCode === 403) {
-      // Cloudinary doesn't accept basic auth for delivery — redirect as fallback
-      return res.redirect(fileUrl);
-    }
-    res.setHeader('Content-Type', contentType);
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    proxyRes.pipe(res);
-  });
-
-  proxyReq.on('error', () => res.redirect(fileUrl));
-  proxyReq.end();
+    // Pre-signed URL valid for 60 seconds
+    const signedUrl = await getSignedUrl(s3, command, { expiresIn: 60 });
+    res.json({ success: true, url: signedUrl });
+  } catch (err) {
+    console.error('S3 pre-sign error:', err);
+    res.status(500).json({ success: false, message: 'Could not generate download link' });
+  }
 };
 exports.deleteApplication = async (req, res) => {
   await JobApplication.findByIdAndDelete(req.params.id);
