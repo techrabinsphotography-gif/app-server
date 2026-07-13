@@ -2,6 +2,7 @@
 const express = require('express');
 const Package = require('../../models/Package');
 const Addon = require('../../models/Addon');
+const CustomService = require('../../models/CustomService');
 const PhotoService = require('../../models/PhotoService');
 const { AppError } = require('../../utils/apiResponse');
 
@@ -91,6 +92,51 @@ router.delete('/addons/:id', async (req, res, next) => {
   try {
     await Addon.findByIdAndDelete(req.params.id);
     res.json({ success: true, message: 'Addon permanently deleted' });
+  } catch (err) { next(err); }
+});
+
+// ── CUSTOM BOOKING SERVICES ───────────────────────────────────────────────────
+
+// GET /api/v1/pricing/custom-services  — public, used by the app
+router.get('/custom-services', async (req, res, next) => {
+  try {
+    const services = await CustomService.find({ isActive: true }).sort({ createdAt: 1 });
+    res.json({ success: true, data: services });
+  } catch (err) { next(err); }
+});
+
+// GET /api/v1/pricing/custom-services/admin  — all (admin)
+router.get('/custom-services/admin', async (req, res, next) => {
+  try {
+    const services = await CustomService.find().sort({ createdAt: 1 });
+    res.json({ success: true, data: services });
+  } catch (err) { next(err); }
+});
+
+// POST /api/v1/pricing/custom-services
+router.post('/custom-services', async (req, res, next) => {
+  try {
+    const { name, price } = req.body;
+    if (!name || price == null) throw new AppError('name and price are required', 400);
+    const svc = await CustomService.create({ name, price });
+    res.status(201).json({ success: true, data: svc });
+  } catch (err) { next(err); }
+});
+
+// PUT /api/v1/pricing/custom-services/:id
+router.put('/custom-services/:id', async (req, res, next) => {
+  try {
+    const svc = await CustomService.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    if (!svc) throw new AppError('Custom service not found', 404);
+    res.json({ success: true, data: svc });
+  } catch (err) { next(err); }
+});
+
+// DELETE /api/v1/pricing/custom-services/:id
+router.delete('/custom-services/:id', async (req, res, next) => {
+  try {
+    await CustomService.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: 'Custom service deleted' });
   } catch (err) { next(err); }
 });
 
