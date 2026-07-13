@@ -48,11 +48,31 @@ const deleteService = async (id) => {
 const hardDeleteService = async (id) => {
   const service = await PhotoService.findByIdAndDelete(id);
   if (!service) throw new AppError('Service not found', 404);
-  
+
   // also delete all pricing packages related to this service
   await Package.deleteMany({ serviceId: id });
-  
+
   return service;
 };
 
-module.exports = { listServices, listAllServices, getServiceBySlug, getPackagesBySlug, createService, updateService, deleteService, hardDeleteService };
+// Get trending services (public)
+const getTrendingServices = async () => {
+  return PhotoService.find({ isActive: true, isTrending: true }).sort({ createdAt: -1 }).limit(5);
+};
+
+// Toggle trending (admin) — max 5
+const toggleTrending = async (id) => {
+  const service = await PhotoService.findById(id);
+  if (!service) throw new AppError('Service not found', 404);
+
+  if (!service.isTrending) {
+    const count = await PhotoService.countDocuments({ isTrending: true });
+    if (count >= 5) throw new AppError('Maximum 5 trending services allowed. Remove one first.', 400);
+  }
+
+  service.isTrending = !service.isTrending;
+  await service.save();
+  return service;
+};
+
+module.exports = { listServices, listAllServices, getServiceBySlug, getPackagesBySlug, createService, updateService, deleteService, hardDeleteService, getTrendingServices, toggleTrending };

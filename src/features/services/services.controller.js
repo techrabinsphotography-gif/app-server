@@ -59,4 +59,20 @@ const hardDeleteService = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-module.exports = { listServices, listAllServices, getServiceBySlug, getPackagesBySlug, createService, updateService, deleteService, hardDeleteService };
+// Public — trending services
+const getTrendingServices = async (req, res, next) => {
+  try {
+    const data = await svc.getTrendingServices();
+    sendSuccess(res, data);
+  } catch (err) { next(err); }
+};
+
+// Admin — toggle trending
+const toggleTrending = async (req, res, next) => {
+  try {
+    const data = await svc.toggleTrending(req.params.id);
+    sendSuccess(res, data, 'Trending status updated');
+  } catch (err) { next(err); }
+};
+
+module.exports = { listServices, listAllServices, getServiceBySlug, getPackagesBySlug, createService, updateService, deleteService, hardDeleteService, getTrendingServices, toggleTrending };

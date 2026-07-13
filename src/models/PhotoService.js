@@ -8,6 +8,7 @@ const photoServiceSchema = new mongoose.Schema(
     description: { type: String, default: '' },
     coverImage: { type: String, default: null },
     isActive: { type: Boolean, default: true },
+    isTrending: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
