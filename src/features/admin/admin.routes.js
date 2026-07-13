@@ -8,6 +8,18 @@ const router = express.Router();
 // Public admin info
 router.get('/settings', getSettings);
 
+// ── PUBLIC: Get portfolio categories only ────────────────────────────────────
+router.get('/portfolio-categories', async (req, res) => {
+  try {
+    const Settings = require('../../models/Settings');
+    let settings = await Settings.findOne();
+    if (!settings) settings = await Settings.create({});
+    res.json({ success: true, data: settings.portfolioCategories || [] });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // Public coupon validation (no auth needed — app users validate coupons)
 router.post('/coupons/validate', async (req, res) => {
   try {

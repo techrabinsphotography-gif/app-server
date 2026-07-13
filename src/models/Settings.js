@@ -2,10 +2,14 @@ const mongoose = require('mongoose');
 
 const settingsSchema = new mongoose.Schema({
   homeSliders: [{
-    imageUrl: { type: String, required: true },
+    imageUrl: { type: String, default: '' },
     title: { type: String },
     link: { type: String }
   }],
+  portfolioCategories: {
+    type: [String],
+    default: ['General', 'Wedding', 'Portrait', 'Event', 'Corporate', 'Maternity'],
+  },
   appDownloads: { type: Number, default: 0 },
   contactEmail: { type: String },
   contactPhone: { type: String },
