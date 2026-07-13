@@ -16,6 +16,11 @@ const packageSchema = new mongoose.Schema(
     // extraDayPrice: cost per additional day beyond baseDays (set by admin)
     extraDayPrice: { type: Number, default: 0, min: 0 },
 
+    // ── Razorpay payment button ───────────────────────────────────
+    // Admin pastes the Razorpay Key ID (rzp_live_xxx / rzp_test_xxx) per package.
+    // The app uses this key to open the Razorpay checkout for this specific package.
+    razorpayKeyId: { type: String, default: '' },
+
     serviceId: { type: mongoose.Schema.Types.ObjectId, ref: 'PhotoService', required: true },
     isActive: { type: Boolean, default: true },
   },
