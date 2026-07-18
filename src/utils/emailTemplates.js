@@ -37,8 +37,15 @@ const baseTemplate = (bodyContent) => `
               <table cellpadding="0" cellspacing="0">
                 <tr>
                   <td style="background:linear-gradient(135deg,#1a0d0e,#2a1510);border-radius:20px;padding:24px 40px;text-align:center;border:1px solid #3a2010;">
-                    <div style="display:inline-block;width:44px;height:44px;background:#FF8E3C;border-radius:50%;text-align:center;line-height:44px;font-size:22px;margin-bottom:10px;">✦</div>
-                    <div style="color:#FF8E3C;font-size:24px;font-weight:800;letter-spacing:1px;margin-bottom:2px;">Rabin's Photography</div>
+                    <img
+                      src="${BRAND.logoUrl}"
+                      alt="Rabin's Photography"
+                      width="80"
+                      height="80"
+                      style="display:block;margin:0 auto 12px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,142,60,0.4);"
+                      onerror="this.style.display='none'"
+                    />
+                    <div style="color:#FF8E3C;font-size:22px;font-weight:800;letter-spacing:1px;margin-bottom:2px;">Rabin's Photography</div>
                     <div style="color:#888;font-size:12px;letter-spacing:2px;text-transform:uppercase;">Professional Photography Studio</div>
                   </td>
                 </tr>
