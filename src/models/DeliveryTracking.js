@@ -1,20 +1,10 @@
 const mongoose = require('mongoose');
 
-/**
- * DeliveryTracking — admin-managed delivery progress for an approved booking.
- *
- * Stages (admin sets manually): e.g. "Editing in Progress", "Photos Ready", etc.
- * Media previews: image/video preview links with an optional validity period.
- *   - while validity window is active the link is served to the user
- *   - after expiry the link is hidden from the user (admin can still see it)
- */
-
 const mediaPreviewSchema = new mongoose.Schema(
   {
-    url: { type: String, required: true },          // direct URL (image) or embed/drive link (video)
+    url: { type: String, required: true },
     type: { type: String, enum: ['IMAGE', 'VIDEO'], default: 'IMAGE' },
     caption: { type: String, default: '' },
-    // Validity window — if null the preview is always visible
     validFrom: { type: Date, default: null },
     validUntil: { type: Date, default: null },
   },
@@ -23,7 +13,7 @@ const mediaPreviewSchema = new mongoose.Schema(
 
 const trackingStageSchema = new mongoose.Schema(
   {
-    stage: { type: String, required: true, trim: true }, // e.g. "Photos Edited", "Album Ready"
+    stage: { type: String, required: true, trim: true },
     note: { type: String, default: '' },
     completedAt: { type: Date, default: Date.now },
   },
@@ -34,10 +24,20 @@ const orderItemSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
     quantity: { type: Number, required: true, min: 1 },
-    unit: { type: String, default: '' },             // e.g. "prints", "albums", "clips"
+    unit: { type: String, default: '' },
     description: { type: String, default: '' },
   },
   { _id: true, timestamps: false }
+);
+
+// ── User feedback schema ─────────────────────────────────────────────────────
+const feedbackSchema = new mongoose.Schema(
+  {
+    rating: { type: Number, min: 1, max: 5, default: null }, // 1-5 stars
+    comment: { type: String, default: '' },
+    submittedAt: { type: Date, default: Date.now },
+  },
+  { _id: false }
 );
 
 const deliveryTrackingSchema = new mongoose.Schema(
@@ -46,24 +46,17 @@ const deliveryTrackingSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Booking',
       required: true,
-      unique: true,  // one tracking record per booking
+      unique: true,
     },
-
-    // ── Current status message (latest stage summary) ──────────────
-    currentStage: { type: String, default: '' },     // free-text shown prominently to user
-
-    // ── Stage history (append-only timeline) ──────────────────────
+    currentStage: { type: String, default: '' },
     stages: { type: [trackingStageSchema], default: [] },
-
-    // ── Ordered product / deliverable list ────────────────────────
     orderItems: { type: [orderItemSchema], default: [] },
-
-    // ── Media previews (images & video links) ─────────────────────
     mediaPreviews: { type: [mediaPreviewSchema], default: [] },
-
-    // ── Final delivery flag ────────────────────────────────────────
     isDelivered: { type: Boolean, default: false },
     deliveredAt: { type: Date, default: null },
+
+    // ── User feedback (submitted after delivery) ─────────────────
+    feedback: { type: feedbackSchema, default: null },
   },
   { timestamps: true }
 );

@@ -156,6 +156,15 @@ const updateAdminStatus = async (id, adminStatus, adminNote = '') => {
 
   if (!booking) throw new AppError('Booking not found', 404);
 
+  // ── Auto-create delivery tracking record when approved ───────────────────
+  if (adminStatus === 'APPROVED') {
+    const DeliveryTracking = require('../../models/DeliveryTracking');
+    const existing = await DeliveryTracking.findOne({ bookingId: id });
+    if (!existing) {
+      await DeliveryTracking.create({ bookingId: id });
+    }
+  }
+
   // ── Send email notification ──────────────────────────────────────────────
   const userEmail = booking.userId?.email;
   const customerName = booking.userId?.name || 'Valued Customer';

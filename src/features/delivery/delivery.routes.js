@@ -17,4 +17,7 @@ router.put('/admin/:bookingId/delivered', authenticate, authorize('ADMIN'), ctrl
 // ── User: get tracking info for their own booking ────────────────────────────
 router.get('/:bookingId', authenticate, ctrl.getUserTracking);
 
+// ── User: submit feedback ────────────────────────────────────────────────────
+router.post('/:bookingId/feedback', authenticate, ctrl.submitFeedback);
+
 module.exports = router;

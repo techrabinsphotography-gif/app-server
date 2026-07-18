@@ -134,6 +134,22 @@ const listAllTracking = async ({ page = 1, limit = 20 }) => {
   return { records, total, page: Number(page), limit: Number(limit) };
 };
 
+// ─── User: submit feedback ───────────────────────────────────────────────────
+const submitFeedback = async (bookingId, userId, role, { rating, comment }) => {
+  const booking = await Booking.findById(bookingId);
+  if (!booking) throw new AppError('Booking not found', 404);
+  if (role !== 'ADMIN' && booking.userId.toString() !== userId) {
+    throw new AppError('Forbidden', 403);
+  }
+
+  const tracking = await DeliveryTracking.findOne({ bookingId });
+  if (!tracking) throw new AppError('Tracking not found', 404);
+
+  tracking.feedback = { rating: rating || null, comment: comment || '', submittedAt: new Date() };
+  await tracking.save();
+  return tracking;
+};
+
 module.exports = {
   getOrCreateTracking,
   updateStage,
@@ -143,4 +159,5 @@ module.exports = {
   markDelivered,
   getTrackingForUser,
   listAllTracking,
+  submitFeedback,
 };

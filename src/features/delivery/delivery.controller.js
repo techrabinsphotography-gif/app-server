@@ -63,6 +63,18 @@ const getUserTracking = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+const submitFeedback = async (req, res, next) => {
+  try {
+    const data = await svc.submitFeedback(
+      req.params.bookingId,
+      req.user.id,
+      req.user.role,
+      req.body
+    );
+    sendSuccess(res, data, 'Feedback submitted');
+  } catch (err) { next(err); }
+};
+
 module.exports = {
   listAllTracking,
   getAdminTracking,
@@ -72,4 +84,5 @@ module.exports = {
   removeMediaPreview,
   markDelivered,
   getUserTracking,
+  submitFeedback,
 };
