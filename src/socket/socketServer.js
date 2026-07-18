@@ -1,6 +1,7 @@
 const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 const chatService = require('../features/chat/chat.service');
+const notifSvc = require('../utils/notificationService');
 
 const initSocketServer = (httpServer) => {
   const io = new Server(httpServer, {
@@ -11,7 +12,10 @@ const initSocketServer = (httpServer) => {
     transports: ['websocket', 'polling'],
   });
 
-  // ── JWT Auth Middleware for Socket.IO ──────────────────────────────────────
+  // ── Inject io into notificationService ────────────────────────────────────
+  notifSvc.setIo(io);
+
+  // ── JWT Auth Middleware ────────────────────────────────────────────────────
   io.use((socket, next) => {
     try {
       const token = socket.handshake.auth?.token;
@@ -27,31 +31,38 @@ const initSocketServer = (httpServer) => {
 
   // ── Connection Handler ─────────────────────────────────────────────────────
   io.on('connection', (socket) => {
-    const roomId = `support_${socket.userId}`;
-    socket.join(roomId);
-    console.log(`🔌 User ${socket.userId} connected — room: ${roomId}`);
+    // Per-user chat room
+    const chatRoom = `support_${socket.userId}`;
+    socket.join(chatRoom);
 
-    // Send message
+    // Global broadcast room — every authenticated user joins
+    socket.join('global_notifications');
+
+    // Per-user personal notification room
+    socket.join(`user_${socket.userId}`);
+
+    console.log(`🔌 User ${socket.userId} connected → rooms: ${chatRoom}, user_${socket.userId}, global_notifications`);
+
+    // ── Chat ────────────────────────────────────────────────────────────────
     socket.on('chat:send', async (data) => {
       try {
         const message = await chatService.saveMessage({
           senderId: socket.userId,
-          roomId,
+          roomId: chatRoom,
           content: data.content,
           messageType: data.type ?? 'TEXT',
         });
-        io.to(roomId).emit('chat:receive', message);
+        io.to(chatRoom).emit('chat:receive', message);
       } catch (err) {
         socket.emit('chat:error', { message: err.message });
       }
     });
 
-    // Typing indicator
     socket.on('chat:typing', () => {
-      socket.to(roomId).emit('chat:typing', { userId: socket.userId });
+      socket.to(chatRoom).emit('chat:typing', { userId: socket.userId });
     });
 
-    // Disconnect
+    // ── Disconnect ──────────────────────────────────────────────────────────
     socket.on('disconnect', () => {
       console.log(`🔌 User ${socket.userId} disconnected`);
     });

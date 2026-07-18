@@ -1,9 +1,11 @@
+'use strict';
 const User = require('../../models/User');
 const Booking = require('../../models/Booking');
 const Payment = require('../../models/Payment');
 const Settings = require('../../models/Settings');
 const Coupon = require('../../models/Coupon');
 const Notification = require('../../models/Notification');
+const notifSvc = require('../../utils/notificationService');
 
 exports.getDashboardStats = async (req, res) => {
   const usersCount = await User.countDocuments({ role: 'CUSTOMER' });
@@ -17,16 +19,14 @@ exports.getDashboardStats = async (req, res) => {
       users: usersCount,
       bookings: bookingsCount,
       payments: successfulPayments,
-      appDownloads: settings?.appDownloads || 0
-    }
+      appDownloads: settings?.appDownloads || 0,
+    },
   });
 };
 
 exports.getSettings = async (req, res) => {
   let settings = await Settings.findOne();
-  if (!settings) {
-    settings = await Settings.create({});
-  }
+  if (!settings) settings = await Settings.create({});
   res.json({ success: true, data: settings });
 };
 
@@ -41,9 +41,26 @@ exports.updateSettings = async (req, res) => {
   res.json({ success: true, data: settings });
 };
 
+// ── Coupons ───────────────────────────────────────────────────────────────────
 exports.createCoupon = async (req, res) => {
   const coupon = await Coupon.create(req.body);
   res.json({ success: true, data: coupon });
+
+  // ── Auto-notify all users about the new discount ─────────────────────────
+  const discountText = coupon.discountType === 'percentage'
+    ? `${coupon.discountValue}% OFF`
+    : `₹${Number(coupon.discountValue).toLocaleString('en-IN')} OFF`;
+
+  const expiry = coupon.validUntil
+    ? ` Valid until ${new Date(coupon.validUntil).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}.`
+    : '';
+
+  notifSvc.broadcast({
+    title: `🎉 New Discount: ${discountText}`,
+    message: `Use code ${coupon.code} to get ${discountText} on your next booking.${expiry}`,
+    type: 'discount',
+    actionUrl: '/services',
+  }).catch(() => { });
 };
 
 exports.getCoupons = async (req, res) => {
@@ -56,14 +73,29 @@ exports.deleteCoupon = async (req, res) => {
   res.json({ success: true, message: 'Deleted successfully' });
 };
 
+// ── Manual notification (kept for backward-compat; now delegates to notifSvc) ─
 exports.sendNotification = async (req, res) => {
-  const note = await Notification.create(req.body);
-  // Example: broadcast via Socket.IO if needed
+  const { title, message, type = 'general', imageUrl, actionUrl, userId } = req.body;
+
+  if (!title?.trim() || !message?.trim()) {
+    return res.status(400).json({ success: false, message: 'title and message are required' });
+  }
+
+  let note;
+  if (userId) {
+    note = await notifSvc.sendToUser(userId, { title, message, type, imageUrl, actionUrl });
+  } else {
+    note = await notifSvc.broadcast({ title, message, type, imageUrl, actionUrl });
+  }
+
   res.json({ success: true, data: note });
 };
 
 exports.getNotifications = async (req, res) => {
-  const notes = await Notification.find().sort('-createdAt');
+  const notes = await Notification.find()
+    .populate('user', 'name email')
+    .sort('-createdAt')
+    .limit(100);
   res.json({ success: true, data: notes });
 };
 

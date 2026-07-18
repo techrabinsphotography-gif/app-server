@@ -1,5 +1,7 @@
+'use strict';
 const svc = require('./services.service');
 const { sendSuccess } = require('../../utils/apiResponse');
+const notifSvc = require('../../utils/notificationService');
 
 const listServices = async (req, res, next) => {
   try {
@@ -8,7 +10,6 @@ const listServices = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-// Admin — all services (inc. inactive)
 const listAllServices = async (req, res, next) => {
   try {
     const data = await svc.listAllServices(req.query.category);
@@ -34,6 +35,15 @@ const createService = async (req, res, next) => {
   try {
     const data = await svc.createService(req.body);
     sendSuccess(res, data, 'Service created', 201);
+
+    // ── Auto-notify all users ─────────────────────────────────────────────
+    notifSvc.broadcast({
+      title: '📸 New Service Added!',
+      message: `${data.title} is now available. Tap to explore packages and book your session.`,
+      type: 'service',
+      imageUrl: data.coverImage || null,
+      actionUrl: `/details/servicedetails?slug=${data.slug}`,
+    }).catch(() => { }); // non-blocking — never fail the request
   } catch (err) { next(err); }
 };
 
@@ -41,6 +51,17 @@ const updateService = async (req, res, next) => {
   try {
     const data = await svc.updateService(req.params.id, req.body);
     sendSuccess(res, data, 'Service updated');
+
+    // Notify only if it's still active (not being soft-deleted)
+    if (data.isActive) {
+      notifSvc.broadcast({
+        title: '✨ Service Updated',
+        message: `${data.title} has been updated with new details. Check it out!`,
+        type: 'service',
+        imageUrl: data.coverImage || null,
+        actionUrl: `/details/servicedetails?slug=${data.slug}`,
+      }).catch(() => { });
+    }
   } catch (err) { next(err); }
 };
 
@@ -51,7 +72,6 @@ const deleteService = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-// Admin — hard delete
 const hardDeleteService = async (req, res, next) => {
   try {
     await svc.hardDeleteService(req.params.id);
@@ -59,7 +79,6 @@ const hardDeleteService = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-// Public — trending services
 const getTrendingServices = async (req, res, next) => {
   try {
     const data = await svc.getTrendingServices();
@@ -67,7 +86,6 @@ const getTrendingServices = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-// Admin — toggle trending
 const toggleTrending = async (req, res, next) => {
   try {
     const data = await svc.toggleTrending(req.params.id);
@@ -75,4 +93,8 @@ const toggleTrending = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-module.exports = { listServices, listAllServices, getServiceBySlug, getPackagesBySlug, createService, updateService, deleteService, hardDeleteService, getTrendingServices, toggleTrending };
+module.exports = {
+  listServices, listAllServices, getServiceBySlug, getPackagesBySlug,
+  createService, updateService, deleteService, hardDeleteService,
+  getTrendingServices, toggleTrending,
+};
