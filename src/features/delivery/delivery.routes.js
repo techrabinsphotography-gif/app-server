@@ -20,4 +20,7 @@ router.get('/:bookingId', authenticate, ctrl.getUserTracking);
 // ── User: submit feedback ────────────────────────────────────────────────────
 router.post('/:bookingId/feedback', authenticate, ctrl.submitFeedback);
 
+// ── User: submit response to a stage input field ─────────────────────────────
+router.post('/:bookingId/stage-response', authenticate, ctrl.submitStageResponse);
+
 module.exports = router;

@@ -31,12 +31,10 @@ const getOrCreateTracking = async (bookingId) => {
 };
 
 // ─── Admin: update current stage ────────────────────────────────────────────
-const updateStage = async (bookingId, stage, note = '') => {
+const updateStage = async (bookingId, stage, note = '', userInputFields = []) => {
   const tracking = await getOrCreateTracking(bookingId);
-
   tracking.currentStage = stage;
-  tracking.stages.push({ stage, note, completedAt: new Date() });
-
+  tracking.stages.push({ stage, note, completedAt: new Date(), userInputFields });
   await tracking.save();
   return tracking;
 };
@@ -134,6 +132,27 @@ const listAllTracking = async ({ page = 1, limit = 20 }) => {
   return { records, total, page: Number(page), limit: Number(limit) };
 };
 
+// ─── User: submit response to a stage input field ───────────────────────────
+const submitStageResponse = async (bookingId, userId, role, stageId, fieldId, response) => {
+  const booking = await Booking.findById(bookingId);
+  if (!booking) throw new AppError('Booking not found', 404);
+  if (role !== 'ADMIN' && booking.userId.toString() !== userId) throw new AppError('Forbidden', 403);
+
+  const tracking = await DeliveryTracking.findOne({ bookingId });
+  if (!tracking) throw new AppError('Tracking not found', 404);
+
+  const stage = tracking.stages.id(stageId);
+  if (!stage) throw new AppError('Stage not found', 404);
+
+  const field = stage.userInputFields.id(fieldId);
+  if (!field) throw new AppError('Field not found', 404);
+
+  field.userResponse = response || '';
+  field.respondedAt = new Date();
+  tracking.markModified('stages');
+  await tracking.save();
+  return tracking;
+};
 // ─── User: submit feedback ───────────────────────────────────────────────────
 const submitFeedback = async (bookingId, userId, role, { rating, comment }) => {
   const booking = await Booking.findById(bookingId);
@@ -159,5 +178,6 @@ module.exports = {
   markDelivered,
   getTrackingForUser,
   listAllTracking,
+  submitStageResponse,
   submitFeedback,
 };

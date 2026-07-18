@@ -16,6 +16,18 @@ const trackingStageSchema = new mongoose.Schema(
     stage: { type: String, required: true, trim: true },
     note: { type: String, default: '' },
     completedAt: { type: Date, default: Date.now },
+    // Optional input fields admin wants from the user for this stage
+    userInputFields: {
+      type: [{
+        label: { type: String, required: true },
+        type: { type: String, enum: ['text', 'link'], default: 'text' },
+        placeholder: { type: String, default: '' },
+        required: { type: Boolean, default: false },
+        userResponse: { type: String, default: '' },
+        respondedAt: { type: Date, default: null },
+      }],
+      default: [],
+    },
   },
   { _id: true, timestamps: false }
 );

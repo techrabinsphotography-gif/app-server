@@ -19,8 +19,8 @@ const getAdminTracking = async (req, res, next) => {
 
 const updateStage = async (req, res, next) => {
   try {
-    const { stage, note } = req.body;
-    const data = await svc.updateStage(req.params.bookingId, stage, note);
+    const { stage, note, userInputFields } = req.body;
+    const data = await svc.updateStage(req.params.bookingId, stage, note, userInputFields || []);
     sendSuccess(res, data, 'Stage updated');
   } catch (err) { next(err); }
 };
@@ -75,6 +75,21 @@ const submitFeedback = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+const submitStageResponse = async (req, res, next) => {
+  try {
+    const { stageId, fieldId, response } = req.body;
+    const data = await svc.submitStageResponse(
+      req.params.bookingId,
+      req.user.id,
+      req.user.role,
+      stageId,
+      fieldId,
+      response
+    );
+    sendSuccess(res, data, 'Response submitted');
+  } catch (err) { next(err); }
+};
+
 module.exports = {
   listAllTracking,
   getAdminTracking,
@@ -85,4 +100,5 @@ module.exports = {
   markDelivered,
   getUserTracking,
   submitFeedback,
+  submitStageResponse,
 };
