@@ -12,8 +12,8 @@ const BRAND = {
   muted: '#888888',
   success: '#4ade80',
   danger: '#f87171',
-  logoUrl: 'https://app-server-maaw.onrender.com/logo.png', // served from server or CDN
-  // fallback inline text logo if image fails
+  // Logo hosted on production website — always publicly accessible
+  logoUrl: 'https://rabinsphotography.com/browser-logo.png',
 };
 
 // ─── Base layout wrapper ───────────────────────────────────────────────────
