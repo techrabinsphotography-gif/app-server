@@ -148,7 +148,12 @@ const updateAdminStatus = async (id, adminStatus, adminNote = '') => {
 
   const booking = await Booking.findByIdAndUpdate(
     id,
-    { adminStatus, adminNote },
+    {
+      adminStatus,
+      adminNote,
+      // When admin approves, also mark payment status as CONFIRMED
+      ...(adminStatus === 'APPROVED' && { status: 'CONFIRMED' }),
+    },
     { new: true, runValidators: true }
   ).populate('userId', 'name email')
     .populate('serviceId', 'title coverImage')
