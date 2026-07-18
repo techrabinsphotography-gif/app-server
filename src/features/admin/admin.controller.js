@@ -10,7 +10,7 @@ exports.getDashboardStats = async (req, res) => {
   const bookingsCount = await Booking.countDocuments();
   const successfulPayments = await Payment.countDocuments({ paymentStatus: 'completed' });
   const settings = await Settings.findOne();
-  
+
   res.json({
     success: true,
     data: {
@@ -73,8 +73,9 @@ exports.getUsers = async (req, res) => {
 };
 
 exports.getBookings = async (req, res) => {
-  const bookings = await Booking.find().populate('user').populate('service').sort('-createdAt');
-  res.json({ success: true, data: bookings });
+  const bookingsSvc = require('../bookings/bookings.service');
+  const result = await bookingsSvc.listAllBookings(req.query);
+  res.json({ success: true, data: result.bookings, total: result.total });
 };
 
 exports.getPayments = async (req, res) => {

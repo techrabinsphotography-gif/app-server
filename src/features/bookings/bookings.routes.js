@@ -8,6 +8,7 @@ const router = Router();
 // Admin routes (must be defined BEFORE /:id to avoid conflict)
 router.get('/admin/all', authenticate, authorize('ADMIN'), ctrl.listAllBookings);
 router.put('/admin/:id/status', authenticate, authorize('ADMIN'), ctrl.updateBookingStatus);
+router.put('/admin/:id/admin-status', authenticate, authorize('ADMIN'), ctrl.updateAdminStatus);
 
 // Customer routes
 router.get('/', authenticate, ctrl.listUserBookings);

@@ -91,14 +91,15 @@ const cancelBooking = async (id, userId) => {
 };
 
 // ─── Admin: list all ─────────────────────────────────────────────────────────
-const listAllBookings = async ({ status, page = 1, limit = 20 }) => {
+const listAllBookings = async ({ status, adminStatus, page = 1, limit = 20 }) => {
   const filter = {};
   if (status) filter.status = status.toUpperCase();
+  if (adminStatus) filter.adminStatus = adminStatus.toUpperCase();
   const skip = (page - 1) * limit;
   const [bookings, total] = await Promise.all([
     Booking.find(filter)
       .populate('userId', 'name email')
-      .populate('serviceId', 'title')
+      .populate('serviceId', 'title coverImage')
       .populate('packageId', 'name tier price')
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -108,13 +109,30 @@ const listAllBookings = async ({ status, page = 1, limit = 20 }) => {
   return { bookings, total, page: Number(page), limit: Number(limit) };
 };
 
-// ─── Admin: update status ─────────────────────────────────────────────────────
+// ─── Admin: update booking status ────────────────────────────────────────────
 const updateBookingStatus = async (id, status) => {
   const booking = await Booking.findByIdAndUpdate(
     id,
     { status },
     { new: true, runValidators: true }
   );
+  if (!booking) throw new AppError('Booking not found', 404);
+  return booking;
+};
+
+// ─── Admin: approve or reject a booking ──────────────────────────────────────
+const updateAdminStatus = async (id, adminStatus, adminNote = '') => {
+  const allowed = ['APPROVED', 'REJECTED'];
+  if (!allowed.includes(adminStatus)) throw new AppError('adminStatus must be APPROVED or REJECTED', 400);
+
+  const booking = await Booking.findByIdAndUpdate(
+    id,
+    { adminStatus, adminNote },
+    { new: true, runValidators: true }
+  ).populate('userId', 'name email')
+    .populate('serviceId', 'title coverImage')
+    .populate('packageId', 'name tier price');
+
   if (!booking) throw new AppError('Booking not found', 404);
   return booking;
 };
@@ -126,4 +144,5 @@ module.exports = {
   cancelBooking,
   listAllBookings,
   updateBookingStatus,
+  updateAdminStatus,
 };

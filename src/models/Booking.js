@@ -18,6 +18,14 @@ const bookingSchema = new mongoose.Schema(
       default: 'PENDING',
     },
 
+    // ── Admin approval (set after payment) ───────────────────────────
+    adminStatus: {
+      type: String,
+      enum: ['PENDING', 'APPROVED', 'REJECTED'],
+      default: 'PENDING',
+    },
+    adminNote: { type: String, default: '' }, // optional rejection reason
+
     // ── Schedule ─────────────────────────────────────────────────────
     scheduledDate: { type: Date, required: true },          // session start date
     scheduledTime: { type: String, default: '' },             // e.g. "10:00 AM"

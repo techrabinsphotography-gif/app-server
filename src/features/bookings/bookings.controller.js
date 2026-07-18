@@ -43,4 +43,12 @@ const updateBookingStatus = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-module.exports = { listUserBookings, createBooking, getBookingById, cancelBooking, listAllBookings, updateBookingStatus };
+const updateAdminStatus = async (req, res, next) => {
+  try {
+    const { adminStatus, adminNote } = req.body;
+    const data = await svc.updateAdminStatus(req.params.id, adminStatus, adminNote);
+    sendSuccess(res, data, `Booking ${adminStatus.toLowerCase()} successfully`);
+  } catch (err) { next(err); }
+};
+
+module.exports = { listUserBookings, createBooking, getBookingById, cancelBooking, listAllBookings, updateBookingStatus, updateAdminStatus };
