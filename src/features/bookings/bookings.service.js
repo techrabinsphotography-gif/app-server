@@ -1,6 +1,8 @@
 const Booking = require('../../models/Booking');
 const Package = require('../../models/Package');
 const { AppError } = require('../../utils/apiResponse');
+const { sendMail } = require('../../utils/mailer');
+const { bookingConfirmationEmail, bookingRejectedEmail } = require('../../utils/emailTemplates');
 
 // ─── List user bookings ───────────────────────────────────────────────────────
 const listUserBookings = async (userId, status) => {
@@ -134,6 +136,42 @@ const updateAdminStatus = async (id, adminStatus, adminNote = '') => {
     .populate('packageId', 'name tier price');
 
   if (!booking) throw new AppError('Booking not found', 404);
+
+  // ── Send email notification ──────────────────────────────────────────────
+  const userEmail = booking.userId?.email;
+  const customerName = booking.userId?.name || 'Valued Customer';
+  const orderId = booking._id.toString().slice(-8).toUpperCase();
+
+  if (userEmail) {
+    try {
+      if (adminStatus === 'APPROVED') {
+        const html = bookingConfirmationEmail({
+          customerName,
+          orderId,
+          packageName: booking.packageId?.name || 'Photography Package',
+          serviceName: booking.serviceId?.title || '',
+          scheduledDate: booking.scheduledDate,
+          scheduledTime: booking.scheduledTime,
+          venue: booking.venue,
+          totalAmount: booking.totalAmount,
+          addons: booking.addons || [],
+        });
+        await sendMail(userEmail, `✓ Booking Confirmed — #${orderId} | Rabin's Photography`, html);
+      } else if (adminStatus === 'REJECTED') {
+        const html = bookingRejectedEmail({
+          customerName,
+          orderId,
+          packageName: booking.packageId?.name || 'Photography Package',
+          adminNote,
+        });
+        await sendMail(userEmail, `Booking Update — #${orderId} | Rabin's Photography`, html);
+      }
+    } catch (mailErr) {
+      // Don't block the status update if email fails
+      console.error('[updateAdminStatus] Email send failed:', mailErr.message);
+    }
+  }
+
   return booking;
 };
 
