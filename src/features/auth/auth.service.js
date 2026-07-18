@@ -1,9 +1,13 @@
 const crypto = require('crypto');
+const { OAuth2Client } = require('google-auth-library');
 const User = require('../../models/User');
 const RefreshToken = require('../../models/RefreshToken');
 const { signAccess, signRefresh, verifyRefresh } = require('../../utils/jwt');
 const { AppError } = require('../../utils/apiResponse');
 const { sendMail } = require('../../utils/mailer');
+
+// One shared OAuth2Client — audience is the Web Client ID
+const googleClient = new OAuth2Client(process.env.GOOGLE_WEB_CLIENT_ID);
 
 // ─── Register ─────────────────────────────────────────────────────────────────
 const register = async ({ name, email, password }) => {
@@ -175,6 +179,61 @@ const verifyOtp = async (email, otp) => {
 
   return _issueTokens(user);
 };
+// ─── Google OAuth (idToken from mobile app) ───────────────────────────────────
+const googleAuth = async (idToken) => {
+  if (!idToken) throw new AppError('Google idToken is required', 400);
+
+  // Verify the token against Google's servers
+  let payload;
+  try {
+    const ticket = await googleClient.verifyIdToken({
+      idToken,
+      // Accept tokens issued for Web OR Android client IDs
+      audience: [
+        process.env.GOOGLE_WEB_CLIENT_ID,
+        process.env.GOOGLE_ANDROID_CLIENT_ID,
+      ].filter(Boolean),
+    });
+    payload = ticket.getPayload();
+  } catch (err) {
+    throw new AppError('Invalid Google token: ' + err.message, 401);
+  }
+
+  const { sub: googleId, email, name, picture } = payload;
+
+  if (!email) throw new AppError('Google account has no email address', 400);
+
+  // Find existing user by googleId first, then fall back to email
+  let user = await User.findOne({ googleId });
+
+  if (!user) {
+    user = await User.findOne({ email });
+  }
+
+  if (user) {
+    // Update googleId + avatar if this is the first Google login for an existing email account
+    if (!user.googleId) {
+      user.googleId = googleId;
+      user.isEmailVerified = true;
+    }
+    if (picture && !user.avatarUrl) user.avatarUrl = picture;
+    await user.save({ validateBeforeSave: false });
+  } else {
+    // New user — create account (no password needed for Google users)
+    const randomPass = crypto.randomBytes(24).toString('hex');
+    user = await User.create({
+      name: name || email.split('@')[0],
+      email,
+      passwordHash: randomPass,   // hashed by pre-save hook; never used directly
+      googleId,
+      avatarUrl: picture || null,
+      isEmailVerified: true,
+    });
+  }
+
+  return _issueTokens(user);
+};
+
 const _issueTokens = async (user) => {
   const accessToken = signAccess(user._id.toString(), user.role);
   const refreshToken = signRefresh(user._id.toString());
@@ -188,4 +247,4 @@ const _issueTokens = async (user) => {
   return { accessToken, refreshToken, user };
 };
 
-module.exports = { register, login, refresh, logout, forgotPassword, resetPassword, verifyEmail, sendOtp, verifyOtp };
+module.exports = { register, login, refresh, logout, forgotPassword, resetPassword, verifyEmail, sendOtp, verifyOtp, googleAuth };

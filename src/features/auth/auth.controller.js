@@ -80,9 +80,17 @@ const verifyOtp = async (req, res, next) => {
     const { email, otp } = req.body;
     const { accessToken, refreshToken, user } = await authService.verifyOtp(email, otp);
     res.cookie('refreshToken', refreshToken, REFRESH_COOKIE_OPTS);
-    // Include refreshToken in body so mobile app can store it
     sendSuccess(res, { accessToken, refreshToken, user }, 'Logged in successfully');
   } catch (err) { next(err); }
 };
 
-module.exports = { register, login, refreshToken, logout, forgotPassword, resetPassword, verifyEmail, sendOtp, verifyOtp };
+const googleAuth = async (req, res, next) => {
+  try {
+    const { idToken } = req.body;
+    const { accessToken, refreshToken, user } = await authService.googleAuth(idToken);
+    res.cookie('refreshToken', refreshToken, REFRESH_COOKIE_OPTS);
+    sendSuccess(res, { accessToken, refreshToken, user }, 'Logged in with Google');
+  } catch (err) { next(err); }
+};
+
+module.exports = { register, login, refreshToken, logout, forgotPassword, resetPassword, verifyEmail, sendOtp, verifyOtp, googleAuth };
