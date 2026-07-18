@@ -27,38 +27,57 @@ const createBooking = async (userId, body) => {
     additionalDates = [],
     venue = '',
     specialNotes = '',
-    addons = [],   // [{ addonId, name, price }]
+    addons = [],          // [{ addonId, name, price }]
+    totalAmount: clientTotal, // sent from app as fallback for custom bookings
   } = body;
 
-  // Validate package
-  const pkg = await Package.findById(packageId);
-  if (!pkg) throw new AppError('Package not found', 404);
+  // ── Try to load package for server-side pricing ──────────────────────────
+  let pkg = null;
+  const isValidObjectId = (id) => id && /^[a-f\d]{24}$/i.test(String(id));
 
-  // ── Pricing: flat base price + extra days beyond included days + extras ──
-  const numDays = 1 + (Array.isArray(additionalDates) ? additionalDates.length : 0);
-  const baseDays = pkg.baseDays || 1;
-  const edRate = pkg.extraDayPrice || 0;
-  const extraDays = Math.max(0, numDays - baseDays);
-  const baseAmount = pkg.price + (extraDays * edRate);   // flat + extra day charges
-  const addonsAmount = Array.isArray(addons)
-    ? addons.reduce((sum, a) => sum + (Number(a.price) || 0), 0)
-    : 0;
-  const hours = Math.max(0, Math.floor(Number(extraHours) || 0));
-  const rate = Number(extraHourRate) || 1000;
-  const extraAmount = hours * rate;
-  const preTax = baseAmount + addonsAmount + extraAmount;
-  const taxAmount = Math.round(preTax * 0.08 * 100) / 100;
-  const totalAmount = Math.round((preTax + taxAmount) * 100) / 100;
+  if (isValidObjectId(packageId)) {
+    pkg = await Package.findById(packageId);
+  }
+
+  // ── Pricing ──────────────────────────────────────────────────────────────
+  let baseAmount, addonsAmount, extraAmount, taxAmount, totalAmount;
+
+  if (pkg) {
+    // Standard booking — calculate from package
+    const numDays = 1 + (Array.isArray(additionalDates) ? additionalDates.length : 0);
+    const baseDays = pkg.baseDays || 1;
+    const edRate = pkg.extraDayPrice || 0;
+    const extraDays = Math.max(0, numDays - baseDays);
+    baseAmount = pkg.price + (extraDays * edRate);
+    addonsAmount = Array.isArray(addons)
+      ? addons.reduce((sum, a) => sum + (Number(a.price) || 0), 0)
+      : 0;
+    const hours = Math.max(0, Math.floor(Number(extraHours) || 0));
+    const rate = Number(extraHourRate) || 1000;
+    extraAmount = hours * rate;
+    const preTax = baseAmount + addonsAmount + extraAmount;
+    taxAmount = Math.round(preTax * 0.08 * 100) / 100;
+    totalAmount = Math.round((preTax + taxAmount) * 100) / 100;
+  } else {
+    // Custom booking — no package, use amount provided by client
+    baseAmount = Number(clientTotal) || 0;
+    addonsAmount = Array.isArray(addons)
+      ? addons.reduce((sum, a) => sum + (Number(a.price) || 0), 0)
+      : 0;
+    extraAmount = 0;
+    taxAmount = 0;
+    totalAmount = Number(clientTotal) || baseAmount;
+  }
 
   return Booking.create({
     userId,
-    serviceId,
-    packageId,
+    serviceId: isValidObjectId(serviceId) ? serviceId : undefined,
+    packageId: pkg ? packageId : undefined,
     scheduledDate,
     scheduledTime,
     outTime,
-    extraHours: hours,
-    extraHourRate: rate,
+    extraHours: pkg ? Math.max(0, Math.floor(Number(extraHours) || 0)) : 0,
+    extraHourRate: Number(extraHourRate) || 1000,
     additionalDates,
     venue,
     specialNotes,
