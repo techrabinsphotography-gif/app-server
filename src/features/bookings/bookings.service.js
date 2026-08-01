@@ -3,6 +3,7 @@ const Package = require('../../models/Package');
 const { AppError } = require('../../utils/apiResponse');
 const { sendMail } = require('../../utils/mailer');
 const { bookingConfirmationEmail, bookingRejectedEmail } = require('../../utils/emailTemplates');
+const notifSvc = require('../../utils/notificationService');
 
 // ─── List user bookings ───────────────────────────────────────────────────────
 const listUserBookings = async (userId, status) => {
@@ -69,7 +70,7 @@ const createBooking = async (userId, body) => {
     totalAmount = Number(clientTotal) || baseAmount;
   }
 
-  return Booking.create({
+  const booking = await Booking.create({
     userId,
     serviceId: isValidObjectId(serviceId) ? serviceId : undefined,
     packageId: pkg ? packageId : undefined,
@@ -88,6 +89,18 @@ const createBooking = async (userId, body) => {
     taxAmount,
     totalAmount,
   });
+
+  // ── Push "booking received" notification to the booking owner ──────────────
+  try {
+    await notifSvc.sendToUser(userId.toString(), {
+      title: 'Booking received successfully',
+      message: `We've received your booking${pkg ? ` for the ${pkg.name}` : ''}. Admin will review it shortly.`,
+      type: 'booking',
+      actionUrl: `app://bookings/${booking._id}`,
+    });
+  } catch (_) { /* silent */ }
+
+  return booking;
 };
 
 // ─── Get single booking ───────────────────────────────────────────────────────
@@ -203,6 +216,34 @@ const updateAdminStatus = async (id, adminStatus, adminNote = '') => {
       // Don't block the status update if email fails
       console.error('[updateAdminStatus] Email send failed:', mailErr.message);
     }
+  }
+
+  // ── Push in-app notification to the booking owner ──────────────────────────
+  try {
+    const uid = booking.userId?._id ? booking.userId._id.toString() : booking.userId.toString();
+    if (uid) {
+      if (adminStatus === 'APPROVED') {
+        await notifSvc.sendToUser(uid, {
+          title: '🎉 Booking confirmed',
+          message: adminNote
+            ? `Your booking #${orderId} has been confirmed. ${adminNote}`
+            : `Your booking #${orderId} has been confirmed. We'll see you soon!`,
+          type: 'booking',
+          actionUrl: `app://bookings/${id}`,
+        });
+      } else if (adminStatus === 'REJECTED') {
+        await notifSvc.sendToUser(uid, {
+          title: 'Booking update',
+          message: adminNote
+            ? `Your booking #${orderId} could not be confirmed. ${adminNote}`
+            : `Your booking #${orderId} could not be confirmed. Please contact support.`,
+          type: 'booking',
+          actionUrl: `app://bookings/${id}`,
+        });
+      }
+    }
+  } catch (notifErr) {
+    console.error('[updateAdminStatus] Notif failed:', notifErr.message);
   }
 
   return booking;

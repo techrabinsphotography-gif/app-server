@@ -1,6 +1,16 @@
 const DeliveryTracking = require('../../models/DeliveryTracking');
 const Booking = require('../../models/Booking');
 const { AppError } = require('../../utils/apiResponse');
+const notifSvc = require('../../utils/notificationService');
+
+// ─── Helper: resolve booking owner userId from a bookingId ──────────────────
+const _bookingOwnerId = async (bookingId) => {
+  const b = await Booking.findById(bookingId, { userId: 1 }).lean();
+  return b?.userId ? b.userId.toString() : null;
+};
+
+// ─── Helper: build a booking-action deep link ───────────────────────────────
+const _trackingActionUrl = (bookingId) => `app://tracking/${bookingId}`;
 
 // ─── Get or create tracking record for a booking ────────────────────────────
 const getOrCreateTracking = async (bookingId) => {
@@ -36,6 +46,22 @@ const updateStage = async (bookingId, stage, note = '', userInputFields = []) =>
   tracking.currentStage = stage;
   tracking.stages.push({ stage, note, completedAt: new Date(), userInputFields });
   await tracking.save();
+
+  // ── Push per-user notification to the booking owner ────────────────────────
+  try {
+    const userId = await _bookingOwnerId(bookingId);
+    if (userId) {
+      await notifSvc.sendToUser(userId, {
+        title: `Booking Update: ${stage}`,
+        message: note
+          ? `A new stage was added to your booking. ${note}`
+          : `A new stage was added to your booking. Tap to view details.`,
+        type: 'booking',
+        actionUrl: _trackingActionUrl(bookingId),
+      });
+    }
+  } catch (_) { /* never block the main flow on notif failure */ }
+
   return tracking;
 };
 
@@ -52,6 +78,22 @@ const addMediaPreview = async (bookingId, { url, type = 'IMAGE', caption = '', v
   const tracking = await getOrCreateTracking(bookingId);
   tracking.mediaPreviews.push({ url, type, caption, validFrom: validFrom || null, validUntil: validUntil || null });
   await tracking.save();
+
+  // ── Push per-user notification to the booking owner ────────────────────────
+  try {
+    const userId = await _bookingOwnerId(bookingId);
+    if (userId) {
+      await notifSvc.sendToUser(userId, {
+        title: `New ${type.toLowerCase()} preview ready`,
+        message: caption
+          ? `A new preview was shared: ${caption}`
+          : `A new preview is ready for your booking. Tap to view.`,
+        type: 'service',
+        actionUrl: _trackingActionUrl(bookingId),
+      });
+    }
+  } catch (_) { /* silent */ }
+
   return tracking;
 };
 
@@ -72,6 +114,20 @@ const markDelivered = async (bookingId) => {
   tracking.currentStage = 'Delivered';
   tracking.stages.push({ stage: 'Delivered', note: 'All deliverables handed over.', completedAt: new Date() });
   await tracking.save();
+
+  // ── Push per-user notification to the booking owner ────────────────────────
+  try {
+    const userId = await _bookingOwnerId(bookingId);
+    if (userId) {
+      await notifSvc.sendToUser(userId, {
+        title: '🎉 Your booking is fully delivered',
+        message: 'All deliverables have been handed over. Thanks for choosing Robin Photo Studio!',
+        type: 'booking',
+        actionUrl: _trackingActionUrl(bookingId),
+      });
+    }
+  } catch (_) { /* silent */ }
+
   return tracking;
 };
 
