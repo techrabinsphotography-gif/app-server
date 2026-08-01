@@ -25,7 +25,7 @@
 
 ## Overview
 
-The Robin-App backend provides all the server-side functionality for a React Native / Expo mobile app. It replaces every mocked API with real, secure, production-ready endpoints covering:
+The Robin App backend provides all the server-side functionality for a React Native / Expo mobile app. It replaces every mocked API with real, secure, production-ready endpoints covering:
 
 - 🔐 JWT authentication with refresh token rotation
 - 📅 Photography service browsing & session booking

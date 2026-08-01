@@ -1,17 +1,13 @@
 const jwt = require('jsonwebtoken');
 
-/**
- * Sign a short-lived access token (15 min)
- */
-const signAccess = (userId, role) =>
-  jwt.sign({ sub: userId, role }, process.env.JWT_ACCESS_SECRET, {
-    expiresIn: '15m',
+const signAccess = (userId, role) => {
+  const expiresIn = role === 'ADMIN' ? '24h' : '15m';
+  return jwt.sign({ sub: userId, role }, process.env.JWT_ACCESS_SECRET, {
+    expiresIn,
     issuer: 'robin-app',
   });
+};
 
-/**
- * Sign a long-lived refresh token (30 days — user stays logged in for 30 days)
- */
 const signRefresh = (userId) =>
   jwt.sign({ sub: userId }, process.env.JWT_REFRESH_SECRET, {
     expiresIn: '30d',

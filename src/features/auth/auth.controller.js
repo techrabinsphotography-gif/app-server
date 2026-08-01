@@ -86,8 +86,9 @@ const verifyOtp = async (req, res, next) => {
 
 const googleAuth = async (req, res, next) => {
   try {
-    const { idToken } = req.body;
-    const { accessToken, refreshToken, user } = await authService.googleAuth(idToken);
+    // Receives { googleId, email, name, picture } from the app
+    const { googleId, email, name, picture } = req.body;
+    const { accessToken, refreshToken, user } = await authService.googleAuth({ googleId, email, name, picture });
     res.cookie('refreshToken', refreshToken, REFRESH_COOKIE_OPTS);
     sendSuccess(res, { accessToken, refreshToken, user }, 'Logged in with Google');
   } catch (err) { next(err); }
