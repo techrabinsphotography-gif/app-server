@@ -33,40 +33,40 @@ const createApp = () => {
   // ── Security & Logging ──────────────────────────────────────────────────────
   // CORS must be registered BEFORE helmet so preflight OPTIONS requests
   // are handled correctly and not blocked by helmet's security headers.
-
-  // Build the allowed-origins list from env (trimmed, no empties)
-  // Production origins are always included so the server works even if
-  // ALLOWED_ORIGINS env var is missing or only has dev origins.
-  const PRODUCTION_ORIGINS = [
-    'https://rabin-admin.vercel.app',
-    'https://rabinsphotography.com',
-    'https://www.rabinsphotography.com',
-  ];
-
-  const _envOrigins = (process.env.ALLOWED_ORIGINS || '')
-    .split(',')
-    .map((o) => o.trim())
-    .filter(Boolean);
-
-  // Always merge env origins with production origins (deduped)
-  const _allowedOrigins = [...new Set([..._envOrigins, ...PRODUCTION_ORIGINS])];
+  //
+  // PERMISSIVE CORS: Dynamically reflect the request Origin header.
+  // This avoids repeated breakage every time a new frontend domain is
+  // deployed (e.g. nozzearte.in, rabin-admin.vercel.app, etc.).
+  // credentials=true MUST be paired with a specific origin (never "*"),
+  // so echoing back the origin is the safest permissive approach.
 
   const corsOptions = {
     origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-      if (_allowedOrigins.includes('*')) return callback(null, origin);
-      if (_allowedOrigins.includes(origin)) return callback(null, origin);
-      // In development or if list is somehow empty, allow all
-      if (_allowedOrigins.length === 0) return callback(null, origin);
-      callback(new Error(`CORS: origin '${origin}' not allowed`));
+      callback(null, origin || true);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'Accept',
+      'Origin',
+      'Referer',
+      'User-Agent',
+      'Cache-Control',
+      'x-amz-date',
+      'x-amz-security-token',
+    ],
+    exposedHeaders: [
+      'Content-Length',
+      'Content-Type',
+      'ETag',
+    ],
+    maxAge: 86400,
     optionsSuccessStatus: 200,
   };
 
-  // Handle preflight for ALL routes
   app.options('*', cors(corsOptions));
   app.use(cors(corsOptions));
 
@@ -82,9 +82,11 @@ const createApp = () => {
   app.use(cookieParser());
 
   // ── Keep-alive ping (prevents Render free tier from sleeping) ────────────────
+  // Use dynamic self-URL so it works regardless of deployment domain
+  const SELF_URL = process.env.SELF_URL || 'https://app-server-maaw.onrender.com';
   setInterval(async () => {
     try {
-      await fetch('https://app-server-maaw.onrender.com/health');
+      await fetch(`${SELF_URL}/health`);
     } catch (_) { }
   }, 14 * 60 * 1000); // every 14 minutes
   app.get('/health', (req, res) => {

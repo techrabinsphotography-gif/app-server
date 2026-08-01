@@ -6,10 +6,21 @@ const notifSvc = require('../utils/notificationService');
 const initSocketServer = (httpServer) => {
   const io = new Server(httpServer, {
     cors: {
-      origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
-      methods: ['GET', 'POST'],
+      origin: (origin, callback) => {
+        callback(null, origin || true);
+      },
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+      credentials: true,
+      allowedHeaders: [
+        'Content-Type',
+        'Authorization',
+        'X-Requested-With',
+        'Accept',
+        'Origin',
+      ],
     },
     transports: ['websocket', 'polling'],
+    allowEIO3: true,
   });
 
   // ── Inject io into notificationService ────────────────────────────────────
