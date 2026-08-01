@@ -5,6 +5,7 @@ const http = require('http');
 const createApp = require('./src/app');
 const connectDB = require('./src/config/db');
 const { initSocketServer } = require('./src/socket/socketServer');
+const { seedAdmin } = require('./src/utils/seedAdmin');
 
 const PORT = process.env.PORT || 3000;
 
@@ -21,16 +22,23 @@ const start = async () => {
   // 1. Connect to MongoDB
   await connectDB();
 
-  // 2. Create Express app
+  // 2. Seed admin user (creates if missing, resets password if changed via env)
+  try {
+    await seedAdmin();
+  } catch (err) {
+    console.error('❌ Failed to seed admin user:', err.message);
+  }
+
+  // 3. Create Express app
   const app = createApp();
 
-  // 3. Wrap in http.Server so Socket.IO can share the same port
+  // 4. Wrap in http.Server so Socket.IO can share the same port
   const httpServer = http.createServer(app);
 
-  // 4. Attach Socket.IO
+  // 5. Attach Socket.IO
   initSocketServer(httpServer);
 
-  // 5. Listen
+  // 6. Listen
   httpServer.listen(PORT, () => {
     console.log(`🚀 Robin-App server running on port ${PORT} [${process.env.NODE_ENV || 'development'}]`);
     console.log(`   Health → http://localhost:${PORT}/health`);
