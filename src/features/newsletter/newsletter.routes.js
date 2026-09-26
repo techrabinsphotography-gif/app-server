@@ -30,14 +30,14 @@ router.post('/subscribe', async (req, res) => {
           <p style="margin:0 0 20px;font-size:15px;color:#555;line-height:1.7;">
             Thank you for subscribing! Every time we publish a new article — photography tips, behind-the-scenes stories, wedding guides, and more — you'll be the first to know with a direct link to the post.
           </p>
-          <a href="${process.env.SITE_URL || 'https://nozzearte.in'}/blog"
+          <a href="${process.env.SITE_URL || 'https://www.rabinsphotography.com'}/blog"
              style="display:inline-block;background:linear-gradient(135deg,#ff4f5a,#ff8c42);color:#fff;text-decoration:none;padding:14px 28px;border-radius:30px;font-size:15px;font-weight:700;">
             Browse Latest Articles →
           </a>
           <hr style="border:none;border-top:1px solid #eee;margin:32px 0;" />
           <p style="margin:0;font-size:13px;color:#aaa;text-align:center;">
             Rabin's Photography · Kolkata, India<br/>
-            <a href="https://nozzearte.in" style="color:#ff4f5a;text-decoration:none;">nozzearte.in</a>
+            <a href="${process.env.SITE_URL || 'https://www.rabinsphotography.com'}" style="color:#ff4f5a;text-decoration:none;">rabinsphotography.com</a>
           </p>
         </div>
       </div>

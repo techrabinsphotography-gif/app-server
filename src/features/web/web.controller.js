@@ -14,7 +14,7 @@ const sendNewsletterBroadcast = async (post) => {
     const subscribers = await NewsletterSubscriber.find().select('email').lean();
     if (!subscribers.length) return;
 
-    const blogUrl = `${process.env.SITE_URL || 'https://nozzearte.in'}/blog/${post._id}`;
+    const blogUrl = `${process.env.SITE_URL || 'https://www.rabinsphotography.com'}/blog/${post._id}`;
     const coverImg = post.coverImage
       ? `<img src="${post.coverImage}" alt="${post.title}" style="width:100%;max-height:300px;object-fit:cover;border-radius:12px 12px 0 0;" />`
       : '';
@@ -50,7 +50,7 @@ const sendNewsletterBroadcast = async (post) => {
         <div style="background:#f9f9f9;padding:20px 32px;text-align:center;border-top:1px solid #eee;">
           <p style="margin:0;font-size:12px;color:#aaa;">
             You're receiving this because you subscribed to Rabin's Photography newsletter.<br/>
-            <a href="https://nozzearte.in/blog" style="color:#ff4f5a;text-decoration:none;">Visit our blog</a>
+            <a href="${process.env.SITE_URL || 'https://www.rabinsphotography.com'}/blog" style="color:#ff4f5a;text-decoration:none;">Visit our blog</a>
           </p>
         </div>
       </div>
