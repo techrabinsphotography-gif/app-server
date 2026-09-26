@@ -3,6 +3,72 @@ const TeamMember = require('../../models/TeamMember');
 const BlogPost = require('../../models/BlogPost');
 const CookiePolicy = require('../../models/CookiePolicy');
 const CareerPost = require('../../models/CareerPost');
+const NewsletterSubscriber = require('../../models/NewsletterSubscriber');
+const { sendMail } = require('../../utils/mailer');
+
+// ── Newsletter broadcast helper ───────────────────────────────────────────────
+// Sends one beautiful email per subscriber. Fires & forgets — errors are logged
+// but never bubble up to block the blog save response.
+const sendNewsletterBroadcast = async (post) => {
+  try {
+    const subscribers = await NewsletterSubscriber.find().select('email').lean();
+    if (!subscribers.length) return;
+
+    const blogUrl = `${process.env.SITE_URL || 'https://nozzearte.in'}/blog/${post._id}`;
+    const coverImg = post.coverImage
+      ? `<img src="${post.coverImage}" alt="${post.title}" style="width:100%;max-height:300px;object-fit:cover;border-radius:12px 12px 0 0;" />`
+      : '';
+
+    const html = `
+      <!DOCTYPE html><html><head><meta charset="UTF-8"/>
+      <meta name="viewport" content="width=device-width,initial-scale=1"/>
+      </head><body style="margin:0;padding:0;background:#f4f4f5;font-family:Arial,sans-serif;">
+      <div style="max-width:600px;margin:32px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,0.08);">
+        ${coverImg}
+        <div style="padding:32px;">
+          <div style="display:inline-block;background:#ff4f5a;color:#fff;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:4px 12px;border-radius:20px;margin-bottom:16px;">
+            New Post · ${post.category || 'Photography'}
+          </div>
+          <h1 style="margin:0 0 16px;font-size:24px;font-weight:800;color:#111;line-height:1.3;">
+            ${post.title}
+          </h1>
+          <p style="margin:0 0 24px;font-size:15px;color:#555;line-height:1.7;">
+            ${post.excerpt}
+          </p>
+          <a href="${blogUrl}"
+             style="display:inline-block;background:linear-gradient(135deg,#ff4f5a,#ff8c42);color:#fff;text-decoration:none;padding:14px 28px;border-radius:30px;font-size:15px;font-weight:700;">
+            Read Full Article →
+          </a>
+          <hr style="border:none;border-top:1px solid #eee;margin:32px 0;" />
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div>
+              <p style="margin:0;font-size:14px;font-weight:700;color:#111;">${post.author || "Rabin Ghosh"}</p>
+              <p style="margin:0;font-size:12px;color:#888;">Rabin's Photography · ${post.readTime || '5 min read'}</p>
+            </div>
+          </div>
+        </div>
+        <div style="background:#f9f9f9;padding:20px 32px;text-align:center;border-top:1px solid #eee;">
+          <p style="margin:0;font-size:12px;color:#aaa;">
+            You're receiving this because you subscribed to Rabin's Photography newsletter.<br/>
+            <a href="https://nozzearte.in/blog" style="color:#ff4f5a;text-decoration:none;">Visit our blog</a>
+          </p>
+        </div>
+      </div>
+      </body></html>
+    `;
+
+    // Send to all subscribers — fire & forget each one
+    const promises = subscribers.map(sub =>
+      sendMail(sub.email, `📸 New Article: ${post.title}`, html).catch(err =>
+        console.error(`[newsletter] Failed to send to ${sub.email}:`, err.message)
+      )
+    );
+    await Promise.allSettled(promises);
+    console.log(`[newsletter] Broadcast sent to ${subscribers.length} subscriber(s) for: "${post.title}"`);
+  } catch (err) {
+    console.error('[newsletter] Broadcast error:', err.message);
+  }
+};
 
 // ════════════════════════════════════════════
 //  TEAM
@@ -154,6 +220,12 @@ exports.createBlogPost = async (req, res) => {
     published: !!published,
     featured: !!featured,
   });
+
+  // Send newsletter broadcast if post is published immediately
+  if (post.published) {
+    sendNewsletterBroadcast(post); // fire & forget
+  }
+
   res.status(201).json({ success: true, data: post });
 };
 
@@ -161,8 +233,18 @@ exports.createBlogPost = async (req, res) => {
  * ADMIN: PUT /api/v1/web/blog/:id
  */
 exports.updateBlogPost = async (req, res) => {
+  // Fetch the old version to detect draft → published transition
+  const oldPost = await BlogPost.findById(req.params.id);
   const post = await BlogPost.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
   if (!post) return res.status(404).json({ success: false, message: 'Post not found' });
+
+  // Send broadcast only when transitioning from draft → published (not on every edit)
+  const wasUnpublished = oldPost && !oldPost.published;
+  const isNowPublished = post.published;
+  if (wasUnpublished && isNowPublished) {
+    sendNewsletterBroadcast(post); // fire & forget
+  }
+
   res.json({ success: true, data: post });
 };
 
