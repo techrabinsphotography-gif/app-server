@@ -20,6 +20,15 @@ router.get('/careers/:id', ctrl.getCareerPost);
 // Cookie Policy
 router.get('/cookie-policy', ctrl.getCookiePolicy);
 
+// Privacy Policy
+router.get('/privacy-policy', ctrl.getPrivacyPolicy);
+
+// Terms of Service
+router.get('/terms-of-service', ctrl.getTermsOfService);
+
+// Help & Support
+router.get('/help-support', ctrl.getHelpSupport);
+
 // ── ADMIN-ONLY ROUTES ────────────────────────────────────────────────────────
 router.use(authenticate, authorize('ADMIN'));
 
@@ -42,5 +51,14 @@ router.delete('/careers/:id', ctrl.deleteCareerPost);
 
 // Cookie Policy management
 router.put('/cookie-policy', ctrl.updateCookiePolicy);
+
+// Privacy Policy management
+router.put('/privacy-policy', ctrl.updatePrivacyPolicy);
+
+// Terms of Service management
+router.put('/terms-of-service', ctrl.updateTermsOfService);
+
+// Help & Support management
+router.put('/help-support', ctrl.updateHelpSupport);
 
 module.exports = router;

@@ -4,6 +4,9 @@ const BlogPost = require('../../models/BlogPost');
 const CookiePolicy = require('../../models/CookiePolicy');
 const CareerPost = require('../../models/CareerPost');
 const NewsletterSubscriber = require('../../models/NewsletterSubscriber');
+const PrivacyPolicy = require('../../models/PrivacyPolicy');
+const TermsOfService = require('../../models/TermsOfService');
+const HelpSupport = require('../../models/HelpSupport');
 const { sendMail } = require('../../utils/mailer');
 
 // ── Newsletter broadcast helper ───────────────────────────────────────────────
@@ -370,6 +373,144 @@ exports.updateCookiePolicy = async (req, res) => {
     doc = new CookiePolicy({ sections, lastUpdated: new Date() });
   } else {
     doc.sections = sections;
+    doc.lastUpdated = new Date();
+  }
+  await doc.save();
+  res.json({ success: true, data: doc });
+};
+
+
+// ════════════════════════════════════════════
+//  PRIVACY POLICY
+// ════════════════════════════════════════════
+
+const DEFAULT_PRIVACY_SECTIONS = [
+  { title: '1. Introduction', content: "Rabin's Photography, a brand of Nozze Arte Pvt. Ltd. (CIN: U74999WB2020PTC236330), is committed to protecting your privacy. By accessing our website or booking our services, you agree to the terms of this Privacy Policy." },
+  { title: '2. Information We Collect', content: "We may collect: Full Name, Email Address, Phone Number, Address, payment info via secure gateways, photos/videos captured during shoots, and technical usage data (IP, browser, device)." },
+  { title: '3. How We Use Your Information', content: "We use your data to process bookings and payments, deliver services, communicate about your project, provide customer support, and improve our services." },
+  { title: '4. Data Sharing & Disclosure', content: "We do not sell or rent your personal data. We may share with payment gateway providers, cloud storage platforms, and internal team members for project execution." },
+  { title: '5. Data Storage & Retention', content: "Client data is stored securely on cloud systems. Raw data is stored for up to 90 days unless otherwise agreed. After the retention period, data may be permanently deleted without notice." },
+  { title: '6. Contact Information', content: "Email: support@rabinsphotography.com | Phone/WhatsApp: Available during office hours | Office Hours: Monday to Saturday, 10 AM – 7 PM" },
+];
+
+/**
+ * PUBLIC: GET /api/v1/web/privacy-policy
+ */
+exports.getPrivacyPolicy = async (req, res) => {
+  let doc = await PrivacyPolicy.findOne();
+  if (!doc) {
+    doc = await PrivacyPolicy.create({ sections: DEFAULT_PRIVACY_SECTIONS });
+  }
+  res.json({ success: true, data: doc });
+};
+
+/**
+ * ADMIN: PUT /api/v1/web/privacy-policy
+ */
+exports.updatePrivacyPolicy = async (req, res) => {
+  const { sections, effectiveDate } = req.body;
+  if (!sections || !Array.isArray(sections)) {
+    return res.status(400).json({ success: false, message: 'sections array is required' });
+  }
+  let doc = await PrivacyPolicy.findOne();
+  if (!doc) {
+    doc = new PrivacyPolicy({ sections, effectiveDate, lastUpdated: new Date() });
+  } else {
+    doc.sections = sections;
+    if (effectiveDate) doc.effectiveDate = effectiveDate;
+    doc.lastUpdated = new Date();
+  }
+  await doc.save();
+  res.json({ success: true, data: doc });
+};
+
+
+// ════════════════════════════════════════════
+//  TERMS OF SERVICE
+// ════════════════════════════════════════════
+
+const DEFAULT_TERMS_SECTIONS = [
+  { title: '1. Acceptance of Terms', content: "By accessing or using Rabin's Photography website and services, you agree to be legally bound by these Terms of Service." },
+  { title: '2. Company Information', content: "Rabin's Photography is a brand of Nozze Arte Pvt. Ltd. CIN: U74999WB2020PTC236330. We provide professional photography and videography services across India." },
+  { title: '3. Booking & Payment Policy', content: "Booking is confirmed only after 50% advance payment. Advance is non-refundable and non-transferable. Deliverables will be shared only after full payment clearance." },
+  { title: '4. Cancellation & Rescheduling', content: "Same-day cancellation: 100% advance will be retained. Rescheduling is allowed only in exceptional cases with valid proof and management approval. Any date change may incur additional charges." },
+  { title: '5. Deliverables & Timelines', content: "Raw Photos: 1–10 days after full payment. Edited Photos: 45–60 days after selection. Cinematic Video: 60–90 days after event. Album Design: 20–30 days after photo selection. Album Delivery: 10–15 days after final approval." },
+  { title: '6. Intellectual Property Rights', content: "Rabin's Photography retains full copyright of all images and videos. Clients receive a license for personal use only. Commercial usage requires prior written permission." },
+  { title: '7. Governing Law', content: "These Terms shall be governed by the laws of India. Any disputes will be subject to the jurisdiction of Kolkata, West Bengal." },
+  { title: '8. Contact Information', content: "Email: support@rabinsphotography.com | Phone/WhatsApp: Available during office hours | Office Hours: Monday to Saturday, 10 AM – 7 PM" },
+];
+
+/**
+ * PUBLIC: GET /api/v1/web/terms-of-service
+ */
+exports.getTermsOfService = async (req, res) => {
+  let doc = await TermsOfService.findOne();
+  if (!doc) {
+    doc = await TermsOfService.create({ sections: DEFAULT_TERMS_SECTIONS });
+  }
+  res.json({ success: true, data: doc });
+};
+
+/**
+ * ADMIN: PUT /api/v1/web/terms-of-service
+ */
+exports.updateTermsOfService = async (req, res) => {
+  const { sections, effectiveDate } = req.body;
+  if (!sections || !Array.isArray(sections)) {
+    return res.status(400).json({ success: false, message: 'sections array is required' });
+  }
+  let doc = await TermsOfService.findOne();
+  if (!doc) {
+    doc = new TermsOfService({ sections, effectiveDate, lastUpdated: new Date() });
+  } else {
+    doc.sections = sections;
+    if (effectiveDate) doc.effectiveDate = effectiveDate;
+    doc.lastUpdated = new Date();
+  }
+  await doc.save();
+  res.json({ success: true, data: doc });
+};
+
+
+// ════════════════════════════════════════════
+//  HELP & SUPPORT (FAQ)
+// ════════════════════════════════════════════
+
+const DEFAULT_FAQS = [
+  { question: 'How do I book a session?', answer: 'You can book a session by contacting us via WhatsApp or call, or by filling out the booking form on our website. Your booking will be confirmed only after paying the required advance.' },
+  { question: 'What is the advance payment policy?', answer: 'A 50% advance payment is required to confirm your booking. This advance is non-refundable and non-transferable.' },
+  { question: 'What is your cancellation or rescheduling policy?', answer: 'Same-day cancellations will result in full advance retention. Rescheduling is allowed only in exceptional cases with valid proof and management approval.' },
+  { question: 'What services do you offer?', answer: 'We offer wedding and pre-wedding photography, cinematic films, engagement, haldi and reception coverage, fashion and portfolio shoots, and corporate event coverage.' },
+  { question: 'When will I receive my photos and videos?', answer: 'Raw photos: 1–10 days after full payment. Edited photos: 45–60 days after selection. Cinematic videos: 60–90 days. Album design: 20–30 days. Album delivery: 10–15 days after approval.' },
+  { question: 'How many revisions are included?', answer: 'We offer 2 revisions for albums and 1 revision for videos. Additional revisions will be chargeable.' },
+  { question: 'How long do you store our data?', answer: 'Raw data is stored for 30 days only. After delivery, clients are responsible for maintaining their own backup.' },
+  { question: 'How can I contact support?', answer: 'Email: support@rabinsphotography.com | WhatsApp during working hours | Office Hours: Monday to Saturday, 10 AM – 7 PM.' },
+];
+
+/**
+ * PUBLIC: GET /api/v1/web/help-support
+ */
+exports.getHelpSupport = async (req, res) => {
+  let doc = await HelpSupport.findOne();
+  if (!doc) {
+    doc = await HelpSupport.create({ faqs: DEFAULT_FAQS });
+  }
+  res.json({ success: true, data: doc });
+};
+
+/**
+ * ADMIN: PUT /api/v1/web/help-support
+ */
+exports.updateHelpSupport = async (req, res) => {
+  const { faqs } = req.body;
+  if (!faqs || !Array.isArray(faqs)) {
+    return res.status(400).json({ success: false, message: 'faqs array is required' });
+  }
+  let doc = await HelpSupport.findOne();
+  if (!doc) {
+    doc = new HelpSupport({ faqs, lastUpdated: new Date() });
+  } else {
+    doc.faqs = faqs;
     doc.lastUpdated = new Date();
   }
   await doc.save();
