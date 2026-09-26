@@ -26,6 +26,7 @@ const portfolioRoutes = require('./features/portfolio/portfolio.routes');
 const newsletterRoutes = require('./features/newsletter/newsletter.routes');
 const deliveryRoutes = require('./features/delivery/delivery.routes');
 const notificationsRoutes = require('./features/notifications/notifications.routes');
+const contactRoutes = require('./features/contact/contact.routes');
 
 const createApp = () => {
   const app = express();
@@ -120,6 +121,7 @@ const createApp = () => {
   app.use('/api/v1/newsletter', newsletterRoutes);
   app.use('/api/v1/delivery', deliveryRoutes);
   app.use('/api/v1/notifications', notificationsRoutes);
+  app.use('/api/v1/contact', contactRoutes);
 
   // ── 404 Handler ──────────────────────────────────────────────────────────────
   app.use((req, res) => {
