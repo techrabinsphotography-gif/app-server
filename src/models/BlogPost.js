@@ -24,7 +24,7 @@ const blogPostSchema = new mongoose.Schema({
   category: {
     type: String,
     required: true,
-    enum: ['Wedding', 'Portrait', 'Events', 'Tips & Tricks', 'Behind the Scenes', 'Other'],
+    enum: ['Wedding', 'Pre-Wedding', 'Portrait', 'Events', 'Tips & Tricks', 'Behind the Scenes', 'Rice Ceremony', 'Fashion', 'Commercial', 'Corporate', 'Other'],
     default: 'Other',
   },
   coverImage: {
